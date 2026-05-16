@@ -70,4 +70,15 @@ app.include_router(router)
 # Serve Angular static files in production
 STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist" / "frontend" / "browser"
 if STATIC_DIR.exists():
-    app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
+    from fastapi.responses import FileResponse
+
+    # Serve static assets (JS, CSS, images)
+    app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets") if (STATIC_DIR / "assets").exists() else None
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        """Serve Angular SPA — return index.html for all non-API routes."""
+        file_path = STATIC_DIR / full_path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(str(file_path))
+        return FileResponse(str(STATIC_DIR / "index.html"))

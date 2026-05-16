@@ -23,7 +23,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 LEAGUE_PATH = r"C:\Riot Games\League of Legends"
 LOCKFILE_PATH = os.path.join(LEAGUE_PATH, "lockfile")
-CLOUD_API_URL = os.getenv("CLOUD_API_URL", "http://localhost:8000/api")
+CLOUD_API_URL = os.getenv("CLOUD_API_URL", "https://lol-match-coach.onrender.com/api")
 POLL_INTERVAL = 2000  # ms
 
 # ---------------------------------------------------------------------------
