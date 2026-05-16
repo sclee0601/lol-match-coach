@@ -83,7 +83,7 @@ export interface CompAnalysisResult {
   total_matches_analyzed: number;
 }
 
-const API = (window as any).__API_URL__ || 'http://localhost:8000/api';
+const API = (window as any).__API_URL__ || (window.location.hostname === 'localhost' ? 'http://localhost:8000/api' : '/api');
 
 @Injectable({ providedIn: 'root' })
 export class MatchService {

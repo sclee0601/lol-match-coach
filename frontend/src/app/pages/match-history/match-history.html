@@ -1,0 +1,239 @@
+<!-- Loading -->
+@if (loading) {
+  <div class="loading-state">
+    <span class="spinner"></span> Loading match history for {{ summoner }}...
+  </div>
+}
+
+<!-- Error -->
+@if (error) {
+  <div class="error-state">
+    <p>⚠ {{ error }}</p>
+    <button class="back-btn" routerLink="/">← Back to search</button>
+  </div>
+}
+
+<!-- Live Champ Select Panel -->
+@if (inChampSelect && champSelectData) {
+  <div class="champ-select-panel">
+    <div class="cs-header">
+      <span class="cs-title">&#9889; Live Draft</span>
+      <span class="cs-role">{{ champSelectData.my_role }}</span>
+    </div>
+    <div class="cs-grid">
+      <div class="cs-section">
+        <p class="cs-label">Bans</p>
+        <div class="cs-champs">
+          @for (b of champSelectData.bans; track b) {
+            <span class="cs-champ banned">{{ b }}</span>
+          }
+        </div>
+      </div>
+      <div class="cs-section">
+        <p class="cs-label">Allies</p>
+        <div class="cs-champs">
+          @for (a of champSelectData.ally_picks; track a) {
+            <span class="cs-champ ally">{{ a }}</span>
+          }
+        </div>
+      </div>
+      <div class="cs-section">
+        <p class="cs-label">Enemies</p>
+        <div class="cs-champs">
+          @for (e of champSelectData.enemy_picks; track e) {
+            <span class="cs-champ enemy">{{ e }}</span>
+          }
+        </div>
+      </div>
+    </div>
+    @if (champSelectData.recommendations) {
+      <div class="cs-recs">
+        @if (champSelectData.recommendations.ban_suggestions?.length > 0) {
+          <div class="cs-rec-section">
+            <p class="cs-rec-label">&#128683; Ban These</p>
+            @for (ban of champSelectData.recommendations.ban_suggestions; track ban.champion) {
+              <span class="cs-rec-item ban">{{ ban.champion }} <small>(you lose {{ ban.loss_rate }}%)</small></span>
+            }
+          </div>
+        }
+        @if (champSelectData.recommendations.pick_suggestions?.length > 0) {
+          <div class="cs-rec-section">
+            <p class="cs-rec-label">&#9989; Pick These</p>
+            @for (pick of champSelectData.recommendations.pick_suggestions; track pick.champion) {
+              <span class="cs-rec-item pick">{{ pick.champion }} <small>({{ pick.winrate }}% WR)</small></span>
+            }
+          </div>
+        }
+        @if (champSelectData.recommendations.synergy_matches?.length > 0) {
+          <div class="cs-rec-section">
+            <p class="cs-rec-label">&#129309; Synergy</p>
+            @for (syn of champSelectData.recommendations.synergy_matches; track syn.champion) {
+              <span class="cs-rec-item synergy">{{ syn.champion }} <small>({{ syn.winrate }}% together)</small></span>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+}
+
+<!-- Main content: match list or analysis -->
+@if (!loading && !error) {
+
+  <!-- Analysis results view -->
+  @if (result) {
+    <button class="back-link" (click)="backToMatches()">← Back to matches</button>
+    <app-analysis-results
+      [result]="result"
+      [champion]="selectedChampion"
+      [matchId]="selectedMatchId"
+      (newSession)="backToMatches()"
+      (resultUpdated)="result = $event"
+    />
+  }
+
+  <!-- Champion picker (after selecting a match, before analysis) -->
+  @else if (selectedMatchId) {
+    <div class="pick-section">
+      <button class="back-link" (click)="backToMatches()">← Back to matches</button>
+
+      <p class="pick-label">Select your champion</p>
+      <div class="team-picker">
+        <div class="team">
+          <div class="team-label blue">&#128309; Blue</div>
+          <div class="champ-list">
+            @for (champ of selectedMatchChampions.blue; track champ) {
+              <button class="champ-btn" [class.selected]="selectedChampion === champ" (click)="selectChampion(champ)">
+                {{ champ }}
+              </button>
+            }
+          </div>
+        </div>
+        <div class="team">
+          <div class="team-label red">&#128308; Red</div>
+          <div class="champ-list">
+            @for (champ of selectedMatchChampions.red; track champ) {
+              <button class="champ-btn" [class.selected]="selectedChampion === champ" (click)="selectChampion(champ)">
+                {{ champ }}
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+
+      @if (selectedChampion) {
+        <p class="selection-note">Analyzing: <strong>{{ selectedChampion }}</strong></p>
+      }
+
+      <div class="lang-row">
+        <select [(ngModel)]="selectedLanguage" class="lang-select">
+          @for (lang of languages; track lang.code) {
+            <option [value]="lang.code">{{ lang.label }}</option>
+          }
+        </select>
+      </div>
+
+      <button class="analyze-btn" [disabled]="analyzing" (click)="analyze()">
+        @if (analyzing) { <span class="spinner dark"></span> Analyzing... } @else { Analyze Match }
+      </button>
+
+      @if (analysisError) {
+        <p class="error">{{ analysisError }}</p>
+      }
+    </div>
+  }
+
+  <!-- Match history grid (default view) -->
+  @else {
+    <div class="history-header">
+      <h2>{{ summoner }}</h2>
+      <button class="back-btn" routerLink="/">← New Search</button>
+    </div>
+
+    <div class="history-grid">
+      <!-- Left: Stats -->
+      <div class="stats-col">
+        @if (topChampions.length > 0) {
+          <div class="stats-block">
+            <p class="list-label">&#127942; Best Champions</p>
+            <div class="top-champs-col">
+              @for (tc of topChampions; track tc.champion) {
+                <div class="tc-card">
+                  <span class="tc-name">{{ tc.champion }}</span>
+                  <div class="tc-stats">
+                    <span class="tc-wr" [class.good]="tc.winrate >= 55" [class.bad]="tc.winrate < 45">{{ tc.winrate }}%</span>
+                    <span class="tc-kda">{{ tc.avg_kda }} KDA</span>
+                    <span class="tc-games">{{ tc.games }}G</span>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+        @if (statsLoading) {
+          <p class="loading-hint">Loading stats...</p>
+        }
+
+        @if (compResults.length > 0) {
+          <div class="stats-block">
+            <p class="list-label">&#127919; Best Comp Styles</p>
+            <div class="comp-list">
+              @for (comp of compResults; track comp.comp_type) {
+                <div class="comp-card">
+                  <div class="comp-header">
+                    <span class="comp-name">{{ comp.comp_type }}</span>
+                    <span class="comp-wr" [class.good]="comp.winrate >= 55" [class.bad]="comp.winrate < 45">{{ comp.winrate }}%</span>
+                    <span class="comp-games">{{ comp.games }}G</span>
+                  </div>
+                  @if (comp.role_breakdown) {
+                    <div class="comp-roles">
+                      @for (role of ['Top', 'Jungle', 'Mid', 'ADC', 'Support']; track role) {
+                        @if (comp.role_breakdown[role]) {
+                          <div class="role-row">
+                            <span class="role-name">{{ role }}:</span>
+                            <span class="role-champs">
+                              @for (c of comp.role_breakdown[role]; track c.champion) {
+                                <span class="role-champ" [class.good]="c.winrate >= 55" [class.bad]="c.winrate < 45">{{ c.champion }}</span>
+                              }
+                            </span>
+                          </div>
+                        }
+                      }
+                    </div>
+                  }
+                  @if (comp.best_adcs.length > 0) {
+                    <div class="comp-adcs">
+                      <span class="adcs-label">Best {{ primaryRole || 'Pick' }}:</span>
+                      @for (adc of comp.best_adcs; track adc.champion) {
+                        <span class="adc-tag" [class.good]="adc.winrate >= 55" [class.bad]="adc.winrate < 45">
+                          {{ adc.champion }} {{ adc.winrate }}%
+                        </span>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Right: Match list -->
+      <div class="matches-col">
+        <p class="list-label">Select a match to analyze</p>
+        @for (m of matches; track m.match_id) {
+          <button class="match-row" (click)="selectMatch(m)">
+            <span class="mr-champ">{{ m.my_champion }}</span>
+            <span class="mr-queue">{{ queueLabel(m.queue_id) }}</span>
+            <span class="mr-kda">{{ m.my_kda.kills }}/{{ m.my_kda.deaths }}/{{ m.my_kda.assists }}</span>
+            <span class="mr-dur">{{ formatDuration(m.game_duration) }}</span>
+            <span class="mr-result" [class.win]="m.my_win" [class.loss]="!m.my_win">
+              {{ m.my_win ? 'WIN' : 'LOSS' }}
+            </span>
+            <span class="mr-date">{{ formatDate(m.game_creation) }}</span>
+          </button>
+        }
+      </div>
+    </div>
+  }
+}

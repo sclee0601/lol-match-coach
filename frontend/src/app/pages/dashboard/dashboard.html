@@ -1,0 +1,25 @@
+<div class="dashboard">
+  <div class="hero">
+    <h1>Challenger-Level Match Analysis</h1>
+    <p>Look up your Riot ID to get brutally honest, data-driven coaching on your recent matches.</p>
+  </div>
+
+  <div class="search-card">
+    <div class="search-row">
+      <input
+        type="text"
+        class="summoner-input"
+        [(ngModel)]="summonerInput"
+        (keydown)="onKeydown($event)"
+        placeholder="Riot ID  (e.g. Faker#NA1)"
+        autocomplete="off"
+      />
+      <button class="search-btn" (click)="search()" [disabled]="!summonerInput.trim()">
+        Search
+      </button>
+    </div>
+    @if (error) {
+      <p class="error">⚠ {{ error }}</p>
+    }
+  </div>
+</div>

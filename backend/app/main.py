@@ -1,6 +1,7 @@
 import sys
 import io
 import os
+from pathlib import Path
 
 if hasattr(sys.stdout, "buffer"):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
@@ -10,6 +11,7 @@ if hasattr(sys.stderr, "buffer"):
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -44,8 +46,9 @@ async def auth_middleware(request: Request, call_next):
     if not APP_API_KEY:
         return await call_next(request)
 
-    # Skip auth for docs and health check
-    if request.url.path in ("/docs", "/openapi.json", "/health"):
+    # Skip auth for docs, health check, and static files
+    path = request.url.path
+    if path in ("/docs", "/openapi.json", "/health") or not path.startswith("/api"):
         return await call_next(request)
 
     # Check API key header
@@ -63,3 +66,8 @@ async def health():
 
 from app.routers.match import router
 app.include_router(router)
+
+# Serve Angular static files in production
+STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist" / "frontend" / "browser"
+if STATIC_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
