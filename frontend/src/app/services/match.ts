@@ -55,11 +55,6 @@ export interface TopChampion {
   score: number;
 }
 
-export interface TopChampionsResult {
-  top_champions: TopChampion[];
-  total_matches_analyzed: number;
-}
-
 export interface CompAdc {
   champion: string;
   games: number;
@@ -78,11 +73,6 @@ export interface CompResult {
   role_breakdown?: { [role: string]: { champion: string; games: number; winrate: number }[] };
 }
 
-export interface CompAnalysisResult {
-  comp_analysis: CompResult[];
-  total_matches_analyzed: number;
-}
-
 const API = (window as any).__API_URL__ || (window.location.hostname === 'localhost' ? 'http://localhost:8000/api' : '/api');
 
 @Injectable({ providedIn: 'root' })
@@ -99,18 +89,6 @@ export class MatchService {
   getPlayerStats(summoner: string): Observable<{ top_champions: TopChampion[]; comp_analysis: CompResult[]; total_matches_analyzed: number }> {
     const params = new HttpParams().set('summoner', summoner);
     return this.http.get<{ top_champions: TopChampion[]; comp_analysis: CompResult[]; total_matches_analyzed: number }>(`${API}/player-stats`, { params });
-  }
-
-  // --- Top champions (legacy, kept for compatibility) ---
-  getTopChampions(summoner: string): Observable<TopChampionsResult> {
-    const params = new HttpParams().set('summoner', summoner);
-    return this.http.get<TopChampionsResult>(`${API}/top-champions`, { params });
-  }
-
-  // --- Comp analysis (legacy, kept for compatibility) ---
-  getCompAnalysis(summoner: string): Observable<CompAnalysisResult> {
-    const params = new HttpParams().set('summoner', summoner);
-    return this.http.get<CompAnalysisResult>(`${API}/comp-analysis`, { params });
   }
 
   // --- Analyze by match ID (Riot API) ---
