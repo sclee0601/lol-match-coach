@@ -8,7 +8,7 @@
     <div class="chat-body">
       @if (messages.length === 0) {
         <div class="suggestions">
-          <p class="suggestions-label">Ask a question about your replay:</p>
+          <p class="suggestions-label">Ask a question about your match:</p>
           @for (s of suggestions; track s) {
             <button class="suggestion-btn" (click)="send(s)">{{ s }}</button>
           }
@@ -33,7 +33,7 @@
         <textarea
           [(ngModel)]="input"
           (keydown)="onKeydown($event)"
-          placeholder="Ask about your replay..."
+          placeholder="Ask about your match..."
           rows="2"
           class="chat-input"
           [disabled]="loading"

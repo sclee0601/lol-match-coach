@@ -1,13 +1,13 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReplayUploadComponent } from './components/replay-upload/replay-upload';
+import { MatchLookupComponent } from './components/match-lookup/match-lookup';
 import { AnalysisResultsComponent } from './components/analysis-results/analysis-results';
-import { AnalysisResult } from './services/replay';
+import { AnalysisResult } from './services/match';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, ReplayUploadComponent, AnalysisResultsComponent],
+  imports: [CommonModule, MatchLookupComponent, AnalysisResultsComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

@@ -61,5 +61,5 @@ async def health():
     return {"status": "ok"}
 
 
-from app.routers.replay import router
+from app.routers.match import router
 app.include_router(router)

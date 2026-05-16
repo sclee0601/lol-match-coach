@@ -19,7 +19,7 @@
           <p>Look up your Riot ID to get brutally honest, data-driven coaching on your recent matches.</p>
         </div>
       }
-      <app-replay-upload (analysisReady)="onAnalysisReady($event)" />
+      <app-match-lookup (analysisReady)="onAnalysisReady($event)" />
     } @else {
       <app-analysis-results
         [result]="result"

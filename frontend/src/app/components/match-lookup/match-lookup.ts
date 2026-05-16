@@ -1,16 +1,16 @@
 import { Component, EventEmitter, Output, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ReplayService, AnalysisResult, MatchCard, TopChampion, CompResult } from '../../services/replay';
+import { MatchService, AnalysisResult, MatchCard, TopChampion, CompResult } from '../../services/match';
 
 @Component({
-  selector: 'app-replay-upload',
+  selector: 'app-match-lookup',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  templateUrl: './replay-upload.html',
-  styleUrl: './replay-upload.scss',
+  templateUrl: './match-lookup.html',
+  styleUrl: './match-lookup.scss',
 })
-export class ReplayUploadComponent implements OnDestroy {
+export class MatchLookupComponent implements OnDestroy {
   @Output() analysisReady = new EventEmitter<{
     result: AnalysisResult;
     champion: string;
@@ -51,16 +51,16 @@ export class ReplayUploadComponent implements OnDestroy {
 
   readonly languages = [
     { code: 'English',    label: 'English' },
-    { code: 'Korean',     label: '한국어' },
-    { code: 'Japanese',   label: '日本語' },
-    { code: 'Chinese',    label: '中文' },
+    { code: 'Korean',     label: '?�국?? },
+    { code: 'Japanese',   label: '?�本�? },
+    { code: 'Chinese',    label: '�?��' },
     { code: 'Spanish',    label: 'Español' },
     { code: 'Portuguese', label: 'Português' },
     { code: 'French',     label: 'Français' },
     { code: 'German',     label: 'Deutsch' },
   ];
 
-  constructor(private replayService: ReplayService, private cdr: ChangeDetectorRef) {}
+  constructor(private matchService: MatchService, private cdr: ChangeDetectorRef) {}
 
   ngOnDestroy(): void {
     this.stopChampSelectPolling();
@@ -71,7 +71,7 @@ export class ReplayUploadComponent implements OnDestroy {
     this.champSelectPolling = true;
     this.champSelectInterval = setInterval(() => {
       if (!this.summonerInput.trim()) return;
-      this.replayService.getChampSelect(this.summonerInput.trim()).subscribe({
+      this.matchService.getChampSelect(this.summonerInput.trim()).subscribe({
         next: (data) => {
           this.inChampSelect = data.in_champ_select || false;
           this.champSelectData = data.in_champ_select ? data : null;
@@ -122,7 +122,7 @@ export class ReplayUploadComponent implements OnDestroy {
     this.error = '';
 
     // Fetch matches
-    this.replayService.lookupSummoner(s).subscribe({
+    this.matchService.lookupSummoner(s).subscribe({
       next: (res) => {
         this.matches = res.matches;
         this.lookupLoading = false;
@@ -133,7 +133,7 @@ export class ReplayUploadComponent implements OnDestroy {
         this.compLoading = true;
         this.topChampionsError = '';
         this.compError = '';
-        this.replayService.getPlayerStats(s).subscribe({
+        this.matchService.getPlayerStats(s).subscribe({
           next: (res) => {
             this.topChampions = res.top_champions || [];
             this.compResults = (res.comp_analysis || []).slice(0, 5);
@@ -151,7 +151,7 @@ export class ReplayUploadComponent implements OnDestroy {
         });
 
         // Build ban/pick profile and start polling for champ select
-        this.replayService.buildBanpickProfile(s).subscribe();
+        this.matchService.buildBanpickProfile(s).subscribe();
         this.startChampSelectPolling();
       },
       error: (err) => {
@@ -194,7 +194,7 @@ export class ReplayUploadComponent implements OnDestroy {
     this.loading = true;
     this.error = '';
 
-    this.replayService
+    this.matchService
       .analyzeMatch(this.selectedMatchId, this.selectedChampion || undefined, this.selectedLanguage)
       .subscribe({
         next: (result) => {

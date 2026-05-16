@@ -1,7 +1,7 @@
 import { Component, Input, OnChanges, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AnalysisResult, Player, ReplayService } from '../../services/replay';
+import { AnalysisResult, Player, MatchService } from '../../services/match';
 import { MarkdownToHtmlPipe } from '../../pipes/markdown-to-html-pipe';
 
 @Component({
@@ -31,9 +31,9 @@ export class AnalysisResultsComponent implements OnChanges {
 
   readonly languages = [
     { code: 'English', label: 'English' },
-    { code: 'Korean', label: '한국어' },
-    { code: 'Japanese', label: '日本語' },
-    { code: 'Chinese', label: '中文' },
+    { code: 'Korean', label: '?�국?? },
+    { code: 'Japanese', label: '?�本�? },
+    { code: 'Chinese', label: '�?��' },
     { code: 'Spanish', label: 'Español' },
     { code: 'Portuguese', label: 'Português' },
     { code: 'French', label: 'Français' },
@@ -41,7 +41,7 @@ export class AnalysisResultsComponent implements OnChanges {
   ];
   selectedLanguage = 'English';
 
-  constructor(private replayService: ReplayService, private cdr: ChangeDetectorRef) {}
+  constructor(private matchService: MatchService, private cdr: ChangeDetectorRef) {}
 
   ngOnChanges(): void {
     if (!this.result) return;
@@ -53,7 +53,7 @@ export class AnalysisResultsComponent implements OnChanges {
   onLanguageChange(): void {
     if (!this.result || !this.matchId) return;
     this.reanalyzing = true;
-    this.replayService
+    this.matchService
       .analyzeMatch(this.matchId, this.champion || undefined, this.selectedLanguage)
       .subscribe({
         next: (result) => {
@@ -109,7 +109,7 @@ export class AnalysisResultsComponent implements OnChanges {
       ) {
         this.teamfightContent += s + '\n';
       } else if (s.trim()) {
-        // Unmatched content — append to laning as fallback
+        // Unmatched content ??append to laning as fallback
         this.laningContent = s + '\n' + this.laningContent;
       }
     }

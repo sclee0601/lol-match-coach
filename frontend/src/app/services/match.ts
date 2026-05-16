@@ -86,7 +86,7 @@ export interface CompAnalysisResult {
 const API = (window as any).__API_URL__ || 'http://localhost:8000/api';
 
 @Injectable({ providedIn: 'root' })
-export class ReplayService {
+export class MatchService {
   constructor(private http: HttpClient) {}
 
   // --- Summoner lookup ---

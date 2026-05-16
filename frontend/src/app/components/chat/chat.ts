@@ -1,7 +1,7 @@
 import { Component, Input, OnChanges, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ReplayService } from '../../services/replay';
+import { MatchService } from '../../services/match';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -32,7 +32,7 @@ export class ChatComponent implements OnChanges, AfterViewChecked {
     'What should I have done differently at objectives?',
   ];
 
-  constructor(private replayService: ReplayService) {}
+  constructor(private matchService: MatchService) {}
 
   ngOnChanges(): void {
     // Reset chat when analysis changes
@@ -59,7 +59,7 @@ export class ChatComponent implements OnChanges, AfterViewChecked {
 
     const history = this.messages.slice(0, -1).map(m => ({ role: m.role, content: m.content }));
 
-    this.replayService.chat(this.analysis, history, question, this.language).subscribe({
+    this.matchService.chat(this.analysis, history, question, this.language).subscribe({
       next: (res) => {
         this.messages.push({ role: 'assistant', content: res.reply });
         this.loading = false;
