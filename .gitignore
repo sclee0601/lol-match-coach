@@ -1,6 +1,12 @@
 # Environment & secrets
 backend/.env
-backend/data/player_profiles.json
+backend/data/
+
+# Debug output files
+backend/dump_output.txt
+backend/test_output.txt
+backend/timeline_output.txt
+backend/md_check.txt
 
 # Python
 backend/venv/

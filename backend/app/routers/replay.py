@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel, Field
+import asyncio
 from app.services.analyzer import analyze, _call_llm, LANGUAGE_INSTRUCTIONS
 from app.services.riot_api import (
     get_match_timeline,
@@ -12,6 +13,10 @@ from app.services.riot_api import (
     is_summoners_rift_match,
 )
 from app.services.comp_classifier import classify_comp, get_team_champions_for_player
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/api", tags=["replay"])
 
@@ -21,20 +26,20 @@ router = APIRouter(prefix="/api", tags=["replay"])
 # ---------------------------------------------------------------------------
 
 class ChatMessage(BaseModel):
-    role: str
-    content: str
+    role: str = Field(pattern="^(user|assistant)$")
+    content: str = Field(max_length=5000)
 
 
 class ChatRequest(BaseModel):
-    analysis: str
-    history: list[ChatMessage]
-    question: str
+    analysis: str = Field(max_length=50000)
+    history: list[ChatMessage] = Field(max_length=20)
+    question: str = Field(max_length=2000)
     language: str = "English"
 
 
 class AnalyzeMatchRequest(BaseModel):
-    match_id: str
-    champion: str | None = None
+    match_id: str = Field(max_length=50, pattern="^[A-Z0-9_]+$")
+    champion: str | None = Field(default=None, max_length=30)
     language: str = "English"
 
 
@@ -43,7 +48,8 @@ class AnalyzeMatchRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 @router.post("/chat")
-async def chat(req: ChatRequest):
+@limiter.limit("10/minute")
+async def chat(req: ChatRequest, request: Request):
     lang_instruction = LANGUAGE_INSTRUCTIONS.get(req.language, LANGUAGE_INSTRUCTIONS["English"])
     system_msg = (
         f"You are a Challenger-tier League of Legends coach. "
@@ -154,14 +160,15 @@ async def lookup_summoner(summoner: str):
 # ---------------------------------------------------------------------------
 
 @router.post("/analyze-match")
-async def analyze_match(req: AnalyzeMatchRequest):
+@limiter.limit("5/minute")
+async def analyze_match(req: AnalyzeMatchRequest, request: Request):
     """
     Full analysis using only the Riot API:
       1. GET /lol/match/v5/matches/{matchId}          -> player stats
       2. GET /lol/match/v5/matches/{matchId}/timeline -> per-minute frames + events
       3. Run LLM coaching report
     """
-    match_data = get_match_summary(req.match_id)
+    match_data = await asyncio.to_thread(get_match_summary, req.match_id)
     if not match_data:
         raise HTTPException(
             status_code=404,
@@ -173,7 +180,7 @@ async def analyze_match(req: AnalyzeMatchRequest):
         raise HTTPException(status_code=422, detail="No player data in match.")
 
     # Timeline is the core of the coaching - every second of the game
-    timeline = get_match_timeline(req.match_id)
+    timeline = await asyncio.to_thread(get_match_timeline, req.match_id)
     timeline_summary = (
         extract_timeline_summary(timeline, req.champion, players)
         if timeline else ""
@@ -188,8 +195,8 @@ async def analyze_match(req: AnalyzeMatchRequest):
         )
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Analysis failed. Please try again.")
 
     result["players"]      = players
     result["has_timeline"] = bool(timeline)
