@@ -21,5 +21,18 @@
     @if (error) {
       <p class="error">⚠ {{ error }}</p>
     }
+    @if (recentSearches.length > 0) {
+      <div class="recent-searches">
+        <p class="recent-label">Recent</p>
+        <div class="recent-list">
+          @for (s of recentSearches; track s) {
+            <button class="recent-item" (click)="selectRecent(s)">
+              <span class="recent-name">{{ s }}</span>
+              <span class="recent-remove" (click)="removeRecent(s, $event)">✕</span>
+            </button>
+          }
+        </div>
+      </div>
+    }
   </div>
 </div>

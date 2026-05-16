@@ -72,3 +72,58 @@
   border-radius: 6px;
   padding: 10px 14px;
 }
+
+// Recent searches
+.recent-searches {
+  margin-top: 16px;
+  border-top: 1px solid #1f2937;
+  padding-top: 12px;
+}
+
+.recent-label {
+  color: #6b7280;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 8px;
+}
+
+.recent-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+
+  &:hover {
+    border-color: #c89b3c;
+    background: #1a1a0d;
+  }
+}
+
+.recent-name {
+  color: #e8d5a3;
+  font-size: 0.85rem;
+}
+
+.recent-remove {
+  color: #6b7280;
+  font-size: 0.7rem;
+  padding: 2px;
+  border-radius: 3px;
+  transition: color 0.15s;
+
+  &:hover {
+    color: #ef4444;
+  }
+}

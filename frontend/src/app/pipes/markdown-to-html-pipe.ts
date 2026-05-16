@@ -13,10 +13,9 @@ export class MarkdownToHtmlPipe implements PipeTransform {
     let inList = false;
 
     for (const raw of lines) {
-      let line = raw
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.+?)\*/g, '<em>$1</em>');
+      let line = raw;
 
+      // Apply highlights FIRST (before converting markdown to HTML)
       // Highlight numbers with units (e.g. 8.5 CS/min, 34min, 15k gold)
       line = line.replace(/(\d+\.?\d*\s*(CS\/min|cs\/min|CS|gold|g|dmg|min|%|k|K|vision|ward))/g,
         '<span class="hl-stat">$1</span>');
@@ -25,7 +24,7 @@ export class MarkdownToHtmlPipe implements PipeTransform {
       line = line.replace(/\b(\d+\/\d+\/\d+)\b/g, '<span class="hl-kda">$1</span>');
 
       // Highlight time references (e.g. 14min, at 8min, 5-minute)
-      line = line.replace(/\b(\d+)\s*-?\s*min(ute)?s?\b/gi, '<span class="hl-time">$&</span>');
+      line = line.replace(/\b(\d+:\d{2})\b/g, '<span class="hl-time">$&</span>');
 
       // Highlight Challenger/good keywords
       line = line.replace(/\b(Challenger[- ]standard|excellent|strong|efficient|correct|well-timed|dominant)\b/gi,
@@ -34,6 +33,10 @@ export class MarkdownToHtmlPipe implements PipeTransform {
       // Highlight bad keywords
       line = line.replace(/\b(mistake|error|wrong|missed|failed|poor|weak|unacceptable|violation|overextend|overextended|behind|deficit)\b/gi,
         '<span class="hl-bad">$&</span>');
+
+      // NOW convert markdown bold/italic (after highlights, so they don't interfere)
+      line = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      line = line.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
       if (/^### (.+)$/.test(line)) {
         if (inList) { output.push('</ul>'); inList = false; }

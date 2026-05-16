@@ -68,16 +68,16 @@ async def build_banpick_profile(puuid: str) -> dict:
     - best_picks_by_role: best champions per role
     - synergies: teammates that boost winrate
     """
-    # Fetch match history
+    # Fetch match history (reuses cache from lookup)
     all_ids: list[str] = []
     start = 0
-    while len(all_ids) < 30 and start < 100:
+    while len(all_ids) < 20 and start < 100:
         batch = get_match_ids_by_puuid(puuid, count=100, start=start)
         if not batch:
             break
         all_ids.extend(batch)
         start += len(batch)
-    all_ids = all_ids[:30]
+    all_ids = all_ids[:20]
 
     match_data_map = await get_match_summaries_parallel(all_ids, max_concurrent=5)
 

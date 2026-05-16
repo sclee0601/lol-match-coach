@@ -26,6 +26,7 @@ export interface AnalysisResult {
   champion_filter: string | null;
   players: Player[];
   has_timeline: boolean;
+  model_used?: string;
 }
 
 export interface MatchCard {
@@ -112,16 +113,7 @@ export class MatchService {
     });
   }
 
-  // --- LCU / Champ Select ---
-  getLcuStatus(): Observable<{ connected: boolean; phase: string | null }> {
-    return this.http.get<{ connected: boolean; phase: string | null }>(`${API}/lcu/status`);
-  }
-
-  getChampSelect(summoner: string): Observable<any> {
-    const params = new HttpParams().set('summoner', summoner);
-    return this.http.get<any>(`${API}/lcu/champ-select`, { params });
-  }
-
+  // --- Build ban/pick profile (used by desktop helper) ---
   buildBanpickProfile(summoner: string): Observable<any> {
     const params = new HttpParams().set('summoner', summoner);
     return this.http.post<any>(`${API}/banpick-profile`, null, { params });

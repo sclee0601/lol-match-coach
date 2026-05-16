@@ -13,8 +13,15 @@ import { Router } from '@angular/router';
 export class DashboardComponent {
   summonerInput = '';
   error = '';
+  recentSearches: string[] = [];
 
-  constructor(private router: Router) {}
+  constructor(private router: Router) {
+    // Load recent searches from localStorage
+    const saved = localStorage.getItem('recentSearches');
+    if (saved) {
+      this.recentSearches = JSON.parse(saved);
+    }
+  }
 
   search(): void {
     const s = this.summonerInput.trim();
@@ -24,8 +31,25 @@ export class DashboardComponent {
       return;
     }
     this.error = '';
-    // Encode the summoner name to handle # in URLs
+    this._saveSearch(s);
     this.router.navigate(['/history', encodeURIComponent(s)]);
+  }
+
+  selectRecent(summoner: string): void {
+    this.summonerInput = summoner;
+    this.search();
+  }
+
+  removeRecent(summoner: string, event: Event): void {
+    event.stopPropagation();
+    this.recentSearches = this.recentSearches.filter(s => s !== summoner);
+    localStorage.setItem('recentSearches', JSON.stringify(this.recentSearches));
+  }
+
+  private _saveSearch(summoner: string): void {
+    // Add to front, remove duplicates, keep max 5
+    this.recentSearches = [summoner, ...this.recentSearches.filter(s => s !== summoner)].slice(0, 5);
+    localStorage.setItem('recentSearches', JSON.stringify(this.recentSearches));
   }
 
   onKeydown(event: KeyboardEvent): void {

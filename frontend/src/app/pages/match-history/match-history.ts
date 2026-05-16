@@ -35,11 +35,6 @@ export class MatchHistoryComponent implements OnInit, OnDestroy {
   analysisError = '';
   result: AnalysisResult | null = null;
 
-  // Live champ select (handled by local helper app, kept for local dev)
-  inChampSelect = false;
-  champSelectData: any = null;
-  private champSelectInterval: any = null;
-
   readonly languages = [
     { code: 'English', label: 'English' },
     { code: 'Korean', label: '한국어' },
@@ -69,7 +64,7 @@ export class MatchHistoryComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.stopChampSelectPolling();
+    // cleanup if needed
   }
 
   private loadData(): void {
@@ -93,9 +88,8 @@ export class MatchHistoryComponent implements OnInit, OnDestroy {
           error: () => { this.statsLoading = false; },
         });
 
-        // Build ban/pick profile + start polling
+        // Build ban/pick profile for the desktop helper
         this.matchService.buildBanpickProfile(this.summoner).subscribe();
-        this.startChampSelectPolling();
       },
       error: (err) => {
         this.loading = false;
@@ -149,39 +143,9 @@ export class MatchHistoryComponent implements OnInit, OnDestroy {
         error: (err) => {
           this.analyzing = false;
           this.analysisError = err.error?.detail ?? 'Analysis failed.';
-        },
-      });
-  }
-
-  // ---------------------------------------------------------------------------
-  // Live champ select polling
-  // ---------------------------------------------------------------------------
-
-  private startChampSelectPolling(): void {
-    this.champSelectInterval = setInterval(() => {
-      this.matchService.getChampSelect(this.summoner).subscribe({
-        next: (data) => {
-          this.inChampSelect = data.in_champ_select || false;
-          this.champSelectData = data.in_champ_select ? data : null;
-          if (data.phase === 'InProgress' || data.phase === 'WaitingForStats') {
-            this.stopChampSelectPolling();
-            setTimeout(() => this.startChampSelectPolling(), 300000);
-          }
           this.cdr.detectChanges();
         },
-        error: () => {
-          this.inChampSelect = false;
-          this.champSelectData = null;
-        },
       });
-    }, 3000);
-  }
-
-  private stopChampSelectPolling(): void {
-    if (this.champSelectInterval) {
-      clearInterval(this.champSelectInterval);
-      this.champSelectInterval = null;
-    }
   }
 
   // ---------------------------------------------------------------------------

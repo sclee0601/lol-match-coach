@@ -6,6 +6,9 @@
     @if (result.champion_filter) {
       <span class="filter-tag">{{ result.champion_filter }}</span>
     }
+    @if (result.model_used && result.model_used.includes('fallback')) {
+      <span class="model-warning">⚠️ Fallback model — analysis may be less detailed</span>
+    }
     <select [(ngModel)]="selectedLanguage" (ngModelChange)="onLanguageChange()" class="lang-select" [disabled]="reanalyzing">
       @for (lang of languages; track lang.code) {
         <option [value]="lang.code">{{ lang.label }}</option>

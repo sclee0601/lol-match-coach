@@ -23,6 +23,43 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 LEAGUE_PATH = r"C:\Riot Games\League of Legends"
 LOCKFILE_PATH = os.path.join(LEAGUE_PATH, "lockfile")
+
+
+def find_lockfile() -> str | None:
+    """Auto-find the League lockfile by checking common paths and running processes."""
+    # Check common installation paths
+    common_paths = [
+        r"C:\Riot Games\League of Legends\lockfile",
+        r"D:\Riot Games\League of Legends\lockfile",
+        r"E:\Riot Games\League of Legends\lockfile",
+        r"C:\Program Files\Riot Games\League of Legends\lockfile",
+        r"C:\Program Files (x86)\Riot Games\League of Legends\lockfile",
+        os.path.expanduser(r"~\Riot Games\League of Legends\lockfile"),
+    ]
+
+    for path in common_paths:
+        if os.path.exists(path):
+            return path
+
+    # Try to find via running process command line
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["wmic", "process", "where", "name='LeagueClientUx.exe'", "get", "ExecutablePath"],
+            capture_output=True, text=True, timeout=5
+        )
+        for line in result.stdout.strip().split("\n"):
+            line = line.strip()
+            if line and "LeagueClientUx" in line:
+                # Path is like ...\League of Legends\LeagueClientUx.exe
+                league_dir = os.path.dirname(line)
+                lockfile = os.path.join(league_dir, "lockfile")
+                if os.path.exists(lockfile):
+                    return lockfile
+    except Exception:
+        pass
+
+    return None
 CLOUD_API_URL = os.getenv("CLOUD_API_URL", "https://lol-match-coach.onrender.com/api")
 POLL_INTERVAL = 2000  # ms
 
@@ -31,10 +68,12 @@ POLL_INTERVAL = 2000  # ms
 # ---------------------------------------------------------------------------
 
 def read_lockfile() -> dict | None:
-    if not os.path.exists(LOCKFILE_PATH):
+    """Read the League client lockfile (auto-finds the path)."""
+    lockfile_path = find_lockfile()
+    if not lockfile_path:
         return None
     try:
-        with open(LOCKFILE_PATH, "r") as f:
+        with open(lockfile_path, "r") as f:
             content = f.read().strip()
         parts = content.split(":")
         if len(parts) < 5:
@@ -178,10 +217,17 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
                     "matchup_details": matchup["details"],
                 })
 
-    # Sort by: matchup score first (don't pick into counters), then winrate
-    # Penalize picks with negative matchup, boost picks with positive matchup
+    # Sort by: matchup score first, then late game scaling for teamfights, then winrate
+    # Priority: 1) Don't pick into counters  2) Good teamfight scaling  3) High personal winrate
+    for c in candidates:
+        ctx = get_matchup_context(c["champion"])
+        c["lane_score"] = ctx.get("lane_score", 3)
+        c["late_score"] = ctx.get("late_score", 3)
+
     candidates.sort(key=lambda x: (
-        -(x["winrate"] + x["matchup_score"] * 10),  # matchup heavily weighted
+        -(x["matchup_score"] * 15),      # 상성 most important (don't get countered)
+        -(x["late_score"] * 5),           # teamfight/late scaling
+        -(x["winrate"]),                  # personal winrate
     ))
 
     pick_suggestions = candidates[:3]
@@ -284,15 +330,19 @@ class MatchCoachApp:
 
     def _load_profile(self):
         load_champion_ids()
-        self.profile = load_cached_profile()
+
+        # Always fetch fresh profile from server (latest 30 matches)
+        self.profile = fetch_profile_sync(self.summoner)
+
+        # Fall back to local cache if server is unreachable
         if not self.profile:
-            self.profile = fetch_profile_sync(self.summoner)
+            self.profile = load_cached_profile()
 
         if self.profile:
             self.root.after(0, self._build_main_screen)
         else:
             self.root.after(0, lambda: self.status_label.config(
-                text="⚠ Could not load profile. Is the web app running?", fg="#ef4444"))
+                text="⚠ Could not load profile. Check internet connection.", fg="#ef4444"))
             self.root.after(0, lambda: self.connect_btn.config(state="normal"))
 
     def _build_main_screen(self):
@@ -385,22 +435,36 @@ class MatchCoachApp:
             tk.Label(f, text="✅ PICK THESE", font=("Segoe UI", 10, "bold"),
                      fg="#22c55e", bg="#0d1117").pack(anchor="w")
             for p in recs["pick_suggestions"]:
-                # Main line: champion + winrate
-                pick_text = f"  {p['champion']} — {p['winrate']}% WR ({p['games']}G)"
-                tk.Label(f, text=pick_text, font=("Segoe UI", 10), fg="#86efac", bg="#0d1117").pack(anchor="w")
+                # Champion row with image
+                pick_frame = tk.Frame(f, bg="#0d1117")
+                pick_frame.pack(anchor="w", fill="x", pady=2)
 
-                # Matchup details (상성)
+                # Load champion image
+                self._load_champ_image(pick_frame, p["champion"])
+
+                # Info column
+                info_frame = tk.Frame(pick_frame, bg="#0d1117")
+                info_frame.pack(side="left", padx=(8, 0))
+
+                # Main line: champion + winrate
+                tk.Label(info_frame, text=f"{p['champion']} — {p['winrate']}% WR ({p['games']}G)",
+                         font=("Segoe UI", 10, "bold"), fg="#86efac", bg="#0d1117").pack(anchor="w")
+
+                # Laning/Late context from matchup data
+                ctx = get_matchup_context(p["champion"])
+                if ctx.get("tip"):
+                    # Show lane/late power
+                    power_text = f"라인: {ctx['lane']} | 후반: {ctx['late']} | {ctx['style']}"
+                    tk.Label(info_frame, text=power_text, font=("Segoe UI", 8),
+                             fg="#9ca3af", bg="#0d1117").pack(anchor="w")
+
+                # Matchup details (상성 vs enemies)
                 if p.get("matchup_details"):
                     for detail in p["matchup_details"]:
                         color = "#86efac" if "유리" in detail else "#fca5a5"
-                        tk.Label(f, text=f"      {detail}", font=("Segoe UI", 9),
+                        tk.Label(info_frame, text=detail, font=("Segoe UI", 8),
                                  fg=color, bg="#0d1117").pack(anchor="w")
-                elif enemy_picks:
-                    # Get general champion context
-                    ctx = get_matchup_context(p["champion"])
-                    if ctx.get("tip"):
-                        tk.Label(f, text=f"      라인: {ctx['lane']} | 후반: {ctx['late']}",
-                                 font=("Segoe UI", 9), fg="#6b7280", bg="#0d1117").pack(anchor="w")
+
             tk.Label(f, text="", bg="#0d1117").pack()
 
         # Synergy
@@ -414,6 +478,37 @@ class MatchCoachApp:
     def _clear_content(self):
         for widget in self.content_frame.winfo_children():
             widget.destroy()
+
+    def _load_champ_image(self, parent: tk.Frame, champion: str):
+        """Load a champion icon from Data Dragon and display it."""
+        try:
+            from io import BytesIO
+            from tkinter import PhotoImage
+            import urllib.request
+
+            # Data Dragon champion icon URL
+            url = f"https://ddragon.leagueoflegends.com/cdn/15.10.1/img/champion/{champion}.png"
+
+            # Cache images to avoid re-downloading
+            if not hasattr(self, '_image_cache'):
+                self._image_cache = {}
+
+            if champion in self._image_cache:
+                img = self._image_cache[champion]
+            else:
+                # Download and resize (tkinter PhotoImage supports PNG via subsample)
+                data = urllib.request.urlopen(url, timeout=3).read()
+                img = tk.PhotoImage(data=data)
+                # Subsample to ~32x32 (original is 120x120)
+                img = img.subsample(3, 3)
+                self._image_cache[champion] = img
+
+            label = tk.Label(parent, image=img, bg="#0d1117")
+            label.image = img  # Keep reference
+            label.pack(side="left")
+        except Exception:
+            # If image fails, just show text placeholder
+            tk.Label(parent, text="🎮", font=("Segoe UI", 14), bg="#0d1117").pack(side="left")
 
     def _clear(self):
         for widget in self.root.winfo_children():

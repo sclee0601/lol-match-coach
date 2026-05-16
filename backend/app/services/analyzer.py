@@ -34,40 +34,110 @@ def _load_role_standards(role: str) -> str:
     return ""
 
 
-def _call_llm(messages: list) -> str:
-    """Call Groq llama-3.3-70b with fallback to llama-3.1-8b-instant on rate limit."""
-    if not GROQ_API_KEY:
-        raise RuntimeError("GROQ_API_KEY not set in .env")
-    client = Groq(api_key=GROQ_API_KEY)
+def _call_llm(messages: list) -> tuple[str, str]:
+    """Call LLM with fallback chain. Returns (text, model_used)."""
+    # Try Groq models first (best quality)
+    if GROQ_API_KEY:
+        client = Groq(api_key=GROQ_API_KEY, timeout=30.0)
+        groq_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
 
-    models = [
-        "llama-3.3-70b-versatile",
-        "llama-3.1-8b-instant",
-    ]
-
-    for model in models:
-        print(f"=== Calling Groq ({model}) ===")
-        try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=0.45,
-                max_tokens=6000,
-            )
-            text = response.choices[0].message.content
-            if not text:
-                raise RuntimeError("Groq returned an empty response")
-            print(f"=== Groq succeeded ({model}) ===")
-            return text
-        except Exception as e:
-            error_str = str(e)
-            if "429" in error_str or "rate_limit" in error_str:
-                print(f"=== {model} rate limited, trying fallback ===")
+        for model in groq_models:
+            print(f"=== Calling Groq ({model}) ===")
+            try:
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=0.45,
+                    max_tokens=6000,
+                )
+                text = response.choices[0].message.content
+                if not text:
+                    raise RuntimeError("Groq returned an empty response")
+                print(f"=== Groq succeeded ({model}) ===")
+                return text, model
+            except Exception as e:
+                error_str = str(e)
+                if "429" in error_str or "rate_limit" in error_str:
+                    print(f"=== {model} rate limited, trying next ===")
+                    continue
+                print(f"=== Groq failed: {type(e).__name__}: {e} ===")
                 continue
-            print(f"=== Groq failed: {type(e).__name__}: {e} ===")
-            raise RuntimeError(f"Groq API error: {e}") from e
 
-    raise RuntimeError("All Groq models rate limited. Please try again later.")
+    # Fallback to Cloudflare Workers AI (generous free tier)
+    cf_token = os.getenv("CLOUDFLARE_API_TOKEN", "")
+    cf_account_id = os.getenv("CLOUDFLARE_ACCOUNT_ID", "")
+    if cf_token and cf_account_id:
+        print("=== Falling back to Cloudflare Workers AI ===")
+        try:
+            import httpx
+
+            system_msg = ""
+            user_msg = ""
+            for msg in messages:
+                if msg["role"] == "system":
+                    system_msg = msg["content"]
+                elif msg["role"] == "user":
+                    user_msg = msg["content"]
+
+            url = f"https://api.cloudflare.com/client/v4/accounts/{cf_account_id}/ai/run/@cf/meta/llama-3.1-8b-instruct"
+            headers = {"Authorization": f"Bearer {cf_token}"}
+            payload = {
+                "messages": [
+                    {"role": "system", "content": system_msg},
+                    {"role": "user", "content": user_msg},
+                ],
+                "max_tokens": 4000,
+                "temperature": 0.45,
+            }
+
+            with httpx.Client(timeout=60) as http_client:
+                resp = http_client.post(url, json=payload, headers=headers)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    text = data.get("result", {}).get("response", "")
+                    if text:
+                        print("=== Cloudflare Workers AI succeeded ===")
+                        return text, "cloudflare-llama-3.1-8b (fallback)"
+                else:
+                    print(f"=== Cloudflare returned {resp.status_code}: {resp.text[:200]} ===")
+        except Exception as e:
+            print(f"=== Cloudflare failed: {type(e).__name__}: {e} ===")
+
+    # Fallback to Gemini
+    gemini_key = os.getenv("GEMINI_API_KEY", "")
+    if gemini_key:
+        print("=== Falling back to Gemini ===")
+        try:
+            from google import genai
+
+            client = genai.Client(api_key=gemini_key)
+
+            system_msg = ""
+            user_msg = ""
+            for msg in messages:
+                if msg["role"] == "system":
+                    system_msg = msg["content"]
+                elif msg["role"] == "user":
+                    user_msg = msg["content"]
+
+            prompt = f"{system_msg}\n\n{user_msg}" if system_msg else user_msg
+
+            response = client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=prompt,
+            )
+            text = response.text
+            if not text:
+                raise RuntimeError("Gemini returned an empty response")
+            print("=== Gemini succeeded ===")
+            return text, "gemini-2.0-flash (fallback)"
+        except Exception as e:
+            error_msg = str(e)
+            print(f"=== Gemini failed: {type(e).__name__}: {e} ===")
+            if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
+                pass
+
+    raise RuntimeError("AI analysis is temporarily unavailable due to rate limits. Please try again in a few minutes.")
 
 
 # ---------------------------------------------------------------------------
@@ -158,34 +228,28 @@ Length: {game_length_min} min
 Analyze THIS SPECIFIC GAME using the timeline data above. Every point must reference actual events from the data. Do NOT give generic advice.
 
 ### 1. CS & Gold Analysis
-Using the CS snapshots from the timeline, compare to the {role} benchmark:
-- State the ACTUAL CS numbers at each snapshot (3/5/8/10/14 min) and whether they are ahead or behind benchmark.
-- If behind: explain WHY using kill/death events that happened before that timestamp.
-- Gold comparison vs lane opponent at key moments.
+For each CS snapshot, write ONE line in this exact format:
+- [X]min: [Y]cs — [ahead/behind] benchmark by [Z]cs. [If behind and a death happened before this time, say "Lost CS due to death at [time]". Otherwise say nothing.]
+
+Gold vs opponent: state gold difference at 5min and 10min only.
 
 ### 2. Deaths in Laning Phase (before 14 min)
-For each death that occurred before 14 min in the timeline:
-- Quote the exact event line (timestamp, killer, zone)
-- Was it a gank (multiple enemies in assists)? A lost 1v1 trade? A bad all-in?
-- What should {champ_name} have done differently in that specific matchup vs {opponents[0]['champion'] if opponents else 'unknown'}?
+If 0 deaths before 14min: write "Clean laning phase — no deaths." and stop.
 
-If there are NO deaths before 14 min, say so and move on.
+For each death, use this EXACT format:
+- [time]: Killed by [champion] at [zone]. Assists: [list or none]. HP was [X]%. 
+  → [ONE fix: what {champ_name} should do in this matchup to avoid this specific death]
 
 ### 3. Mid/Late Game Deaths & Objectives
-For each death AFTER 14 min:
-- Quote the exact event line (timestamp, killer, zone, HP%)
-- Categorize: POSITIONING ERROR, PEEL FAILURE, or COOLDOWN MISTAKE
-- One specific fix
+For each death after 14min, same format as above.
 
-For objectives: check the player's zone during each objective event. Were they present or far away?
+For objectives: state if player was near or far. One line each.
 
-### 4. Top 3 Game-Specific Fixes
-Based ONLY on what happened in this game:
-- Fix 1: "At [timestamp], you [what happened from timeline]. Instead, [specific action for {champ_name}] because [reason]."
-- Fix 2: same format
-- Fix 3: same format
+### 4. Top 3 Fixes
+ONLY reference events that actually happened. Format:
+- "At [time], [what happened]. Fix: [one specific action for {champ_name}]."
 
-Keep each fix to 1-2 sentences. No generic advice.
+If the player played well (few deaths, good CS, won), say so. Do NOT invent problems.
 """
     return lang_instruction, prompt
 
@@ -200,26 +264,29 @@ def analyze(players: list[dict], champion_filter: str | None = None, timeline_su
     print("=== PROMPT LENGTH ===", len(prompt))
     print("=== TIMELINE INCLUDED ===", bool(timeline_summary))
 
+    # Get champion name for system message
+    targets_for_msg = players
+    if champion_filter:
+        filtered = [p for p in players if p["champion"].lower() == champion_filter.lower()]
+        if filtered:
+            targets_for_msg = filtered
+    champ_name = targets_for_msg[0]["champion"] if targets_for_msg else "Unknown"
+
     system_msg = (
-        f"You are a Challenger-tier League of Legends coach giving a post-game review. "
+        f"You are a Challenger-tier League of Legends coach. "
         f"{lang_instruction}\n\n"
-        f"STRICT RULES:\n"
-        f"- You are analyzing ONE SPECIFIC GAME. Every sentence must reference data from the game "
-        f"(timestamps, zones, CS numbers, kill events, gold values). If you cannot cite specific "
-        f"game data for a point, do not include it.\n"
-        f"- NEVER use vague phrases: 'be more cautious', 'be more aggressive', 'be more aware', "
-        f"'could have been avoided by positioning better', 'being more careful', 'play safer', "
-        f"'be more cautious and aware of the enemy'. These are USELESS.\n"
-        f"- INSTEAD: reference the EXACT event from the timeline — 'At 8min you died to [champion] "
-        f"at [zone] because [specific reason from data]'.\n"
-        f"- Compare the player's actual CS/gold numbers against the role benchmarks provided.\n"
-        f"- For each death in the timeline: state the timestamp, killer, zone, and player's HP%. "
-        f"Then categorize and give ONE specific fix.\n"
-        f"- Every bullet must contain a timestamp OR a specific number from the game data OR a "
-        f"zone/position from the timeline. If a bullet has none of these, delete it.\n"
-        f"- Tailor advice to the SPECIFIC champion and matchup. A Caitlyn fix is different from "
-        f"an Ezreal fix even if both are ADC.\n"
-        f"- Keep the whole report under 900 words."
+        f"ABSOLUTE RULES (violating any = bad response):\n"
+        f"1. ONLY state facts from the data provided. NEVER guess, assume, or infer what happened.\n"
+        f"2. If the player got kills, that is GOOD. Say 'Good kill on [champ] at [time]' — never criticize a kill.\n"
+        f"3. If the player died, state WHO killed them, WHERE, and whether assists suggest a gank.\n"
+        f"4. NEVER say 'enemy's mistake' or 'not a well-executed trade' — you cannot know this from data.\n"
+        f"5. NEVER say 'focus on CSing instead of fighting' after a kill — kills are worth more than 1-2 CS.\n"
+        f"6. For CS analysis: just state the numbers vs benchmark. If behind, check if a death happened before that timestamp (death = missed CS). If no death, say 'likely missed CS during trades or roam'.\n"
+        f"7. BANNED phrases (never use): 'be more cautious', 'be more aggressive', 'enemy's mistake', "
+        f"'not a well-executed trade', 'focus on CSing', 'caught off guard', 'unable to react'.\n"
+        f"8. For each death: state timestamp, killer, zone, assists. Then ONE actionable fix specific to {champ_name}.\n"
+        f"9. If the player had 0 deaths in a phase, say 'Clean phase — no deaths' and move on. Do NOT invent problems.\n"
+        f"10. Keep it SHORT. Max 600 words total."
     )
 
     messages = [
@@ -227,8 +294,8 @@ def analyze(players: list[dict], champion_filter: str | None = None, timeline_su
         {"role": "user", "content": prompt}
     ]
 
-    analysis_text = _call_llm(messages)
-    print("=== ANALYSIS GENERATED ===")
+    analysis_text, model_used = _call_llm(messages)
+    print(f"=== ANALYSIS GENERATED ({model_used}) ===")
 
     targets = players
     if champion_filter:
@@ -240,4 +307,5 @@ def analyze(players: list[dict], champion_filter: str | None = None, timeline_su
         "analysis": analysis_text,
         "players_analyzed": [p["champion"] for p in targets],
         "champion_filter": champion_filter,
+        "model_used": model_used,
     }

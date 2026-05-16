@@ -64,8 +64,8 @@ async def chat(req: ChatRequest, request: Request):
         messages.append({"role": msg.role, "content": msg.content})
     messages.append({"role": "user", "content": req.question})
 
-    reply = _call_llm(messages)
-    return {"reply": reply}
+    reply, model_used = _call_llm(messages)
+    return {"reply": reply, "model_used": model_used}
 
 
 # ---------------------------------------------------------------------------
@@ -223,16 +223,16 @@ async def player_stats(summoner: str):
     if not puuid:
         raise HTTPException(status_code=404, detail="Summoner not found.")
 
-    # Fetch up to 30 match IDs (enough for stats, faster than 50)
+    # Fetch up to 20 match IDs (same as lookup, so cache is warm)
     all_ids: list[str] = []
     start = 0
-    while len(all_ids) < 30 and start < 100:
+    while len(all_ids) < 20 and start < 100:
         batch = get_match_ids_by_puuid(puuid, count=100, start=start)
         if not batch:
             break
         all_ids.extend(batch)
         start += len(batch)
-    all_ids = all_ids[:30]
+    all_ids = all_ids[:20]
 
     # Fetch all match data in parallel (single pass)
     match_data_map = await get_match_summaries_parallel(all_ids, max_concurrent=5)
