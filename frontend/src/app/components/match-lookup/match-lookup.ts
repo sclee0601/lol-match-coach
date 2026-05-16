@@ -51,12 +51,12 @@ export class MatchLookupComponent implements OnDestroy {
 
   readonly languages = [
     { code: 'English',    label: 'English' },
-    { code: 'Korean',     label: '?œêµ­?? },
-    { code: 'Japanese',   label: '?¥æœ¬èª? },
-    { code: 'Chinese',    label: 'ä¸?–‡' },
-    { code: 'Spanish',    label: 'EspaÃ±ol' },
-    { code: 'Portuguese', label: 'PortuguÃªs' },
-    { code: 'French',     label: 'FranÃ§ais' },
+    { code: 'Korean',     label: '\ud55c\uad6d\uc5b4' },
+    { code: 'Japanese',   label: '\u65e5\u672c\u8a9e' },
+    { code: 'Chinese',    label: '\u4e2d\u6587' },
+    { code: 'Spanish',    label: 'Espa\u00f1ol' },
+    { code: 'Portuguese', label: 'Portugu\u00eas' },
+    { code: 'French',     label: 'Fran\u00e7ais' },
     { code: 'German',     label: 'Deutsch' },
   ];
 

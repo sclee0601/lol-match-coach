@@ -8,6 +8,12 @@ backend/test_output.txt
 backend/timeline_output.txt
 backend/md_check.txt
 
+# LCU helper build artifacts
+lcu-helper/dist/
+lcu-helper/build/
+lcu-helper/*.spec
+lcu-helper/profile_cache.json
+
 # Python
 backend/venv/
 backend/__pycache__/
