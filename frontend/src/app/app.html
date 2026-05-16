@@ -1,0 +1,34 @@
+<div class="app-shell">
+  <header class="app-header">
+    <div class="logo" (click)="showUpload = false">
+      <span class="logo-icon">&#9876;&#65039;</span>
+      <span class="logo-text">LoL Match Coach</span>
+      <span class="logo-badge">Challenger</span>
+    </div>
+  </header>
+
+  <main class="app-main">
+    @if (!result || showUpload) {
+      @if (result && showUpload) {
+        <div class="back-row">
+          <button class="back-btn" (click)="showUpload = false">&#8592; Back to Results</button>
+        </div>
+      } @else {
+        <div class="hero">
+          <h1>Challenger-Level Match Analysis</h1>
+          <p>Look up your Riot ID to get brutally honest, data-driven coaching on your recent matches.</p>
+        </div>
+      }
+      <app-replay-upload (analysisReady)="onAnalysisReady($event)" />
+    } @else {
+      <app-analysis-results
+        [result]="result"
+        [champion]="champion"
+        [matchId]="matchId"
+        (newSession)="newSession()"
+        (goToUpload)="goToUpload()"
+        (resultUpdated)="result = $event"
+      />
+    }
+  </main>
+</div>

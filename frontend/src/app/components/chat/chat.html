@@ -1,0 +1,47 @@
+<div class="chat-panel">
+  <div class="chat-header" (click)="isOpen = !isOpen">
+    <span>&#129302; Ask the Coach</span>
+    <span class="toggle">{{ isOpen ? '&#8964;' : '&#8963;' }}</span>
+  </div>
+
+  @if (isOpen) {
+    <div class="chat-body">
+      @if (messages.length === 0) {
+        <div class="suggestions">
+          <p class="suggestions-label">Ask a question about your replay:</p>
+          @for (s of suggestions; track s) {
+            <button class="suggestion-btn" (click)="send(s)">{{ s }}</button>
+          }
+        </div>
+      }
+
+      <div class="messages">
+        @for (msg of messages; track $index) {
+          <div class="message" [class.user]="msg.role === 'user'" [class.assistant]="msg.role === 'assistant'">
+            <span class="bubble">{{ msg.content }}</span>
+          </div>
+        }
+        @if (loading) {
+          <div class="message assistant">
+            <span class="bubble typing">&#8226;&#8226;&#8226;</span>
+          </div>
+        }
+        <div #messagesEnd></div>
+      </div>
+
+      <div class="chat-input-row">
+        <textarea
+          [(ngModel)]="input"
+          (keydown)="onKeydown($event)"
+          placeholder="Ask about your replay..."
+          rows="2"
+          class="chat-input"
+          [disabled]="loading"
+        ></textarea>
+        <button class="send-btn" (click)="send()" [disabled]="!input.trim() || loading">
+          &#10148;
+        </button>
+      </div>
+    </div>
+  }
+</div>

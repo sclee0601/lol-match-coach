@@ -1,0 +1,71 @@
+<div class="results-wrapper">
+
+  <!-- Header bar -->
+  <div class="results-header">
+    <span class="game-length">{{ gameLength }}</span>
+    @if (result.champion_filter) {
+      <span class="filter-tag">{{ result.champion_filter }}</span>
+    }
+    <select [(ngModel)]="selectedLanguage" (ngModelChange)="onLanguageChange()" class="lang-select" [disabled]="reanalyzing">
+      @for (lang of languages; track lang.code) {
+        <option [value]="lang.code">{{ lang.label }}</option>
+      }
+    </select>
+    @if (reanalyzing) {
+      <span class="reanalyzing">&#9203;</span>
+    }
+    <button class="new-session-btn" (click)="newSession.emit()">New Search</button>
+  </div>
+
+  <!-- Main layout -->
+  <div class="main-grid">
+
+    <!-- Left: Scoreboard -->
+    <div class="scoreboard-panel">
+      <div class="team-block">
+        <div class="team-label blue">Blue {{ blueTeam[0]?.win ? 'WIN' : 'LOSS' }}</div>
+        @for (p of blueTeam; track p.summoner_name) {
+          <div class="p-row" [class.hl]="p.champion === result.champion_filter">
+            <span class="p-score" [style.color]="scoreColor(score(p))">{{ score(p) }}</span>
+            <span class="p-name">{{ p.champion }}</span>
+            <span class="p-kda">{{ p.kills }}/{{ p.deaths }}/{{ p.assists }}</span>
+            <span class="p-cs">{{ csPerMin(p) }}</span>
+          </div>
+        }
+      </div>
+      <div class="team-block">
+        <div class="team-label red">Red {{ redTeam[0]?.win ? 'WIN' : 'LOSS' }}</div>
+        @for (p of redTeam; track p.summoner_name) {
+          <div class="p-row" [class.hl]="p.champion === result.champion_filter">
+            <span class="p-score" [style.color]="scoreColor(score(p))">{{ score(p) }}</span>
+            <span class="p-name">{{ p.champion }}</span>
+            <span class="p-kda">{{ p.kills }}/{{ p.deaths }}/{{ p.assists }}</span>
+            <span class="p-cs">{{ csPerMin(p) }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Right: Tabbed analysis -->
+    <div class="analysis-panel">
+      <div class="tab-bar">
+        <button class="tab" [class.active]="activeTab === 'laning'" (click)="activeTab = 'laning'">Laning</button>
+        <button class="tab" [class.active]="activeTab === 'events'" (click)="activeTab = 'events'">Key Events</button>
+        <button class="tab" [class.active]="activeTab === 'teamfight'" (click)="activeTab = 'teamfight'">Teamfights & Fixes</button>
+      </div>
+      <div class="tab-content">
+        @if (activeTab === 'laning') {
+          <div [innerHTML]="laningContent | markdownToHtml"></div>
+        }
+        @if (activeTab === 'events') {
+          <div [innerHTML]="eventsContent | markdownToHtml"></div>
+        }
+        @if (activeTab === 'teamfight') {
+          <div [innerHTML]="teamfightContent | markdownToHtml"></div>
+        }
+      </div>
+    </div>
+
+  </div>
+
+</div>

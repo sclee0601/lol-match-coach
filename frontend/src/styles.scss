@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&family=Inter:wght@400;600;700&display=swap');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #060b12;
+  color: #d1d5db;
+  font-family: 'Inter', 'Noto Sans KR', 'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', system-ui, sans-serif;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track { background: #0d1117; }
+::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+
+// Markdown highlight classes
+.hl-stat {
+  color: #f0c040;
+  font-weight: 700;
+  background: rgba(240, 192, 64, 0.1);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+
+.hl-kda {
+  color: #e8d5a3;
+  font-weight: 700;
+  font-family: monospace;
+}
+
+.hl-time {
+  color: #60a5fa;
+  font-weight: 600;
+}
+
+.hl-good {
+  color: #4ade80;
+  font-weight: 600;
+}
+
+.hl-bad {
+  color: #f87171;
+  font-weight: 600;
+}

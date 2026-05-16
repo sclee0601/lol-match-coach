@@ -1,0 +1,58 @@
+SUPPORT
+- **Vision Score Benchmark**: 1.5+ vision score per minute (e.g., 50+ vision score in a 35-minute game). Falling below 1.0/min is unacceptable.
+- **Ward Timing**: Place river ward at 1:30 before the enemy jungler's first path reaches bot lane. Upgrade to Control Ward at 2:00.
+- **Roaming**: After pushing the bot lane wave, roam mid to create pressure. Do not sit in bot lane doing nothing when the wave is pushed.
+- **Roam Timing — When to roam**: Only roam when the bot lane wave is pushed into the enemy tower or just crashed. Never roam with a slow-push wave sitting in the middle of the lane — your ADC will lose the wave and CS.
+- **Roam Timing — Level 6**: At level 6, if your champion has a strong roam ultimate (e.g., Shen, Galio, Lux, Nautilus), immediately look for a mid or top roam after the wave crashes. A level 6 roam that results in a kill or Flash burn is always worth it.
+- **Roam Timing — After a kill or summoner burn**: If you win a bot lane trade and the enemy ADC or support burns Flash or dies, immediately roam mid or invade the enemy jungle with your jungler. Do not sit in bot lane doing nothing after winning a fight.
+- **Roam Timing — Objective setup**: At 4:30 (before Dragon), leave bot lane and move toward Dragon pit regardless of wave state. Vision setup for Dragon is more valuable than staying in lane.
+- **Roam Timing — When NOT to roam**: Never roam if your ADC is low HP, the wave is pushing toward your tower, or the enemy bot lane has priority. A roam that leaves your ADC to die 1v2 is always a mistake.
+- **Roam Impact**: A roam must result in a kill, Flash burn, or tower plate. A roam that achieves nothing while your ADC loses 20 CS is a net negative.
+- **Peel vs. Engage**: Decide within the first 2 seconds of a fight whether to peel for the ADC or engage on the enemy backline. Hesitation costs fights.
+- **Zoning**: Use your body to zone the enemy ADC off CS during the laning phase. Step forward to threaten when the enemy support uses an ability.
+- **Recall Timing**: Recall together with your ADC to maintain lane presence. Never recall when the enemy has a wave advantage.
+- **Deep Vision**: Place deep wards in the enemy jungle at 5:00 and 10:00 to track the enemy jungler and set up objective control.
+- **Objective Setup**: Be the first to arrive at Dragon/Baron pit to place vision. Support should have Sweeper active before every objective fight.
+- **Late Game**: In late game, your primary job is to keep your carries alive. Do not overextend to make plays that leave your ADC unprotected.
+- **Engage Timing**: Engage only when your team is in position. Engaging when your team is split across the map is a critical error.
+
+---
+
+## Teamfight Analysis
+
+### Positioning
+- **Carries (ADC/APC)**: Must stay at maximum attack range. Any step inside the enemy threat range without peel is a positioning error.
+- **Tanks/Frontline**: Must be between the enemy and your backline at all times. Failure to body-block skillshots for carries is a positioning error.
+- **Assassins**: Must wait for the enemy frontline to commit before diving the backline. Diving before the frontline engages is a positioning error.
+- **Supports**: Must stay within peel range of the carry. Overextending to make a play that leaves the carry unprotected is a positioning error.
+
+### Target Selection
+- **Priority Targets**: Eliminate the highest-damage threat first (usually ADC or APC), unless an easier kill creates a numbers advantage.
+- **Peel vs. Dive**: Supports and tanks must decide within the first 2 seconds of a fight whether to peel for the carry or dive the enemy backline. Hesitation is an error.
+- **Ignore Tanks**: Do not waste abilities on full-tank champions unless they are the only target available.
+
+### Ability Usage
+- **CC Chains**: Layer crowd control abilities sequentially, not simultaneously. Overlapping CC is wasted potential.
+- **Cooldown Tracking**: Track enemy key cooldowns (Zhonya's, Stopwatch, key ultimates) and disengage or reposition if they are available.
+- **Ability Sequencing**: Use abilities in the correct order to maximize damage (e.g., apply slows before landing skillshots, use shields before taking damage).
+
+### Objective Control
+- **Smite Timing**: Secure objectives with Smite at the correct HP threshold. Missing Smite on Baron or Dragon is a critical error.
+- **Post-Fight Objective**: After winning a teamfight, immediately move to the nearest high-value objective (Baron, Dragon, Tower).
+- **Rift Herald**: Use Rift Herald to destroy towers, not as a teamfight tool unless the fight is already won.
+
+### Macro After Teamfight
+- **Side Lane Pressure**: After winning a teamfight mid, send the split-pusher to a side lane immediately to maximize map pressure.
+- **Base Race Awareness**: After an Ace, evaluate whether a base race is viable before recalling.
+- **Inhibitor Priority**: After taking an inhibitor, do not immediately push for the Nexus unless you have a clear numbers advantage. Instead, set up vision and wait for the next wave.
+
+---
+
+## General Challenger Principles
+
+- **Every death has a reason**: Identify whether the death was caused by poor positioning, incorrect cooldown tracking, vision failure, or macro error.
+- **CS over kills**: A missed CS wave is worth more than a kill in most scenarios. Never sacrifice a wave for a low-value kill.
+- **Tempo**: Always be doing something. Standing still in base or in lane without a purpose is a tempo loss.
+- **Win conditions**: Identify your champion's win condition (teamfight, split-push, pick) and play every decision around enabling that win condition.
+- **HP/Mana Management**: Never be below 40% HP or 30% mana in a contested area (river, enemy jungle, objective zones) without a clear escape plan.
+- **Death Timing**: Deaths within 30 seconds of an objective spawn (Dragon, Baron, Rift Herald) are critical errors — they directly cost objectives.

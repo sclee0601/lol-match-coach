@@ -1,0 +1,8 @@
+KEYS:['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
+BOTTOM in prompt:True
+Role-Specific Standards
+# BOT LANE (ADC) — Challenger Standards
+
+## CS & Gold
+- **CS Benchmark**: 8.0+ CS/min. ADC is the most CS-dependent role. Missing CS under tower is unacceptable.
+- Know your first item power spike (Kraken Slayer, Galeforce, Infinity Edge). Play aggressively after completing i

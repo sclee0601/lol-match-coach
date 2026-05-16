@@ -1,0 +1,60 @@
+Timeline: OK
+Kaisa position: BOTTOM
+
+=== FULL TIMELINE SUMMARY ===
+## Timeline Analysis
+
+### Kaisa — Progression
+CS/Gold/Level (every 5min): 0min: 0cs 500g lvl1, 5min: 33cs 1664g lvl4, 10min: 76cs 4032g lvl7, 15min: 111cs 6586g lvl9, 20min: 159cs 10431g lvl11, 25min: 201cs 13655g lvl13, 30min: 246cs 18386g lvl16, 35min: 286cs 20951g lvl17
+Most time spent in: Bot Lane (Red side) (13min), Top Lane (Red side) (6min), Mid Lane (5min)
+Dangerously low HP moments: 8min (15% HP, 34% mana at Bot Lane (Red side)), 30min (6% HP, 72% mana at Top Lane (Red side)), 34min (5% HP, 10% mana at Red Jungle (Bot)), 36min (23% HP, 41% mana at Blue Base)
+
+### Kill/Death Events
+  - 2min: Maokai killed Kaisa (assisted by FiddleSticks, Ezreal) at Bot Lane (Red side) [100% HP, 90% mana]
+  - 3min: Maokai killed Kaisa (assisted by Ezreal) at Bot Lane (Red side) [92% HP, 92% mana]
+  - 5min: Kaisa killed Maokai (assisted by Karma) at Bot Lane (Red side) [100% HP, 89% mana]
+  - 7min: Kaisa killed Maokai (assisted by Karma) at Bot Lane (Red side) [100% HP, 73% mana]
+  - 8min: Kaisa killed Ezreal (assisted by Karma) at Bot Lane (Red side) [25% HP, 46% mana]
+  - 9min: Ezreal killed Kaisa (assisted by Maokai) at Bot Lane (Red side) [100% HP, 79% mana]
+  - 11min: Ezreal killed Kaisa (assisted by FiddleSticks) at Bot Lane (Red side) [57% HP, 70% mana]
+  - 12min: Kaisa killed Maokai (assisted by Karma) at Bot Lane (Red side) [47% HP, 77% mana]
+  - 13min: Kaisa killed Ezreal (assisted by Ahri, Karma) at Red Jungle (Bot) [98% HP, 100% mana]
+  - 14min: Ezreal killed Kaisa (assisted by FiddleSticks, Maokai) at Bot Lane (Red side) [46% HP, 51% mana]
+  - 16min: Kaisa killed FiddleSticks (assisted by Ahri) at Mid Lane [100% HP, 83% mana]
+  - 19min: Kaisa killed Ezreal at Red Jungle (Top) [29% HP, 85% mana]
+
+### Objective Events (with full team positions)
+  - 8min: Allied team secured WATER_DRAGON
+    Blue team: Poppy(Top Lane (Blue side), 53%HP, far from objective), FiddleSticks(Red Jungle (Bot), 99%HP, near objective), Diana(Mid Lane, 41%HP, mid-range from objective), Ezreal(Bot Lane (Red side), 25%HP, mid-range from objective), Maokai(Bot Lane (Red side), 0%HP, near objective)
+    Red team:  Zaahen(Top Lane (Blue side), 72%HP, far from objective), LeeSin(Red Jungle (Bot), 100%HP, near objective), Ahri(Mid Lane, 16%HP, mid-range from objective), Kaisa(Bot Lane (Red side), 15%HP, mid-range from objective), Karma(Bot Lane (Red side), 85%HP, mid-range from objective)
+  - 8min: Allied team secured HORDE
+    Blue team: Poppy(Top Lane (Blue side), 53%HP, ), FiddleSticks(Red Jungle (Bot), 99%HP, ), Diana(Mid Lane, 41%HP, ), Ezreal(Bot Lane (Red side), 25%HP, ), Maokai(Bot Lane (Red side), 0%HP, )
+    Red team:  Zaahen(Top Lane (Blue side), 72%HP, ), LeeSin(Red Jungle (Bot), 100%HP, ), Ahri(Mid Lane, 16%HP, ), Kaisa(Bot Lane (Red side), 15%HP, ), Karma(Bot Lane (Red side), 85%HP, )
+  - 9min: Allied team secured HORDE
+    Blue team: Poppy(Blue Base, 100%HP, ), FiddleSticks(Blue Jungle (Top), 96%HP, ), Diana(Blue Base, 73%HP, ), Ezreal(Bot Lane (Red side), 84%HP, ), Maokai(Bot Lane (Red side), 100%HP, )
+    Red team:  Zaahen(Top Lane (Blue side), 0%HP, ), LeeSin(Top Lane (Blue side), 88%HP, ), Ahri(Mid Lane, 100%HP, ), Kaisa(Bot Lane (Red side), 100%HP, ), Karma(Red Jungle (Top), 100%HP, )
+  - 9min: Allied team secured HORDE
+    Blue team: Poppy(Blue Base, 100%HP, ), FiddleSticks(Blue Jungle (Top), 96%HP, ), Diana(Blue Base, 73%HP, ), Ezreal(Bot Lane (Red side), 84%HP, ), Maokai(Bot Lane (Red side), 100%HP, )
+    Red team:  Zaahen(Top Lane (Blue side), 0%HP, ), LeeSin(Top Lane (Blue side), 88%HP, ), Ahri(Mid Lane, 100%HP, ), Kaisa(Bot Lane (Red side), 100%HP, ), Karma(Red Jungle (Top), 100%HP, )
+  - 13min: ENEMY secured EARTH_DRAGON — full team positions:
+    Blue team: Poppy(Top Lane (Blue side), 87%HP, far from objective), FiddleSticks(Red Jungle (Bot), 100%HP, near objective), Diana(Mid Lane, 49%HP, mid-range from objective), Ezreal(Bot Lane (Red side), 98%HP, mid-range from objective), Maokai(Red Jungle (Bot), 100%HP, mid-range from objective)
+    Red team:  Zaahen(Top Lane (Blue side), 75%HP, far from objective), LeeSin(Mid Lane, 100%HP, mid-range from objective), Ahri(Red Base, 100%HP, far from objective), Kaisa(Red Base, 100%HP, far from objective), Karma(Red Jungle (Bot), 100%HP, near objective)
+  - 15min: ENEMY secured RIFTHERALD — full team positions:
+    Blue team: Poppy(Top Lane (Blue side), 11%HP, ), FiddleSticks(Blue Jungle (Bot), 98%HP, ), Diana(Mid Lane, 24%HP, ), Ezreal(Bot Lane (Red side), 99%HP, ), Maokai(Bot Lane (Red side), 2%HP, )
+    Red team:  Zaahen(Top Lane (Blue side), 52%HP, ), LeeSin(Blue Jungle (Top), 81%HP, ), Ahri(Red Jungle (Bot), 0%HP, ), Kaisa(Bot Lane (Red side), 0%HP, ), Karma(Bot Lane (Red side), 90%HP, )
+  - 19min: Allied team secured FIRE_DRAGON
+    Blue team: Poppy(Red Jungle (Top), 22%HP, mid-range from objective), FiddleSticks(Red Jungle (Bot), 0%HP, near objective), Diana(Red Jungle (Bot), 0%HP, near objective), Ezreal(Red Jungle (Top), 29%HP, mid-range from objective), Maokai(Red Jungle (Bot), 0%HP, near objective)
+    Red team:  Zaahen(Blue Jungle (Bot), 89%HP, far from objective), LeeSin(Red Jungle (Top), 5%HP, mid-range from objective), Ahri(Red Jungle (Top), 68%HP, mid-range from objective), Kaisa(Red Jungle (Top), 45%HP, mid-range from objective), Karma(Red Jungle (Top), 0%HP, mid-range from objective)
+  - 22min: ENEMY secured BARON_NASHOR — full team positions:
+    Blue team: Poppy(Bot Lane (Red side), 0%HP, far from objective), FiddleSticks(Bot Lane (Blue side), 100%HP, far from objective), Diana(Blue Jungle (Bot), 100%HP, mid-range from objective), Ezreal(Bot Lane (Blue side), 60%HP, far from objective), Maokai(Bot Lane (Blue side), 31%HP, far from objective)
+    Red team:  Zaahen(Blue Jungle (Bot), 59%HP, far from objective), LeeSin(Bot Lane (Blue side), 100%HP, mid-range from objective), Ahri(Top Lane (Blue side), 88%HP, mid-range from objective), Kaisa(Bot Lane (Blue side), 82%HP, far from objective), Karma(Bot Lane (Blue side), 100%HP, mid-range from objective)
+
+### Vision
+  - 1min: Kaisa placed YELLOW_TRINKET at 
+  - 6min: Kaisa placed YELLOW_TRINKET at 
+  - 7min: Kaisa placed YELLOW_TRINKET at 
+  - 10min: Kaisa placed YELLOW_TRINKET at 
+  - 12min: Kaisa placed YELLOW_TRINKET at 
+  - 13min: Kaisa placed CONTROL_WARD at 
+  - 15min: Kaisa placed YELLOW_TRINKET at 
+  - 17min: Kaisa placed CONTROL_WARD at 
