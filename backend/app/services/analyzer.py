@@ -35,12 +35,33 @@ def _load_role_standards(role: str) -> str:
 
 
 def _call_llm(messages: list) -> tuple[str, str]:
-    """Call LLM with fallback chain: Claude → Groq 70B → Cloudflare 8B → Gemini."""
+    """Call LLM with fallback chain: Groq 70B → Claude → Groq 8B → error."""
 
-    # Primary: Claude 3.5 Sonnet (best quality)
+    # Primary: Groq 70B (best free option)
+    if GROQ_API_KEY:
+        client = Groq(api_key=GROQ_API_KEY, timeout=30.0)
+        print("=== Calling Groq (llama-3.3-70b-versatile) ===")
+        try:
+            response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=messages,
+                temperature=0.45,
+                max_tokens=6000,
+            )
+            text = response.choices[0].message.content
+            if text:
+                print("=== Groq 70B succeeded ===")
+                return text, "llama-3.3-70b-versatile"
+        except Exception as e:
+            if "429" in str(e) or "rate_limit" in str(e):
+                print("=== Groq 70B rate limited ===")
+            else:
+                print(f"=== Groq 70B failed: {e} ===")
+
+    # Fallback: Claude (if key works)
     anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
     if anthropic_key:
-        print("=== Calling Claude 3.5 Sonnet ===")
+        print("=== Trying Claude ===")
         try:
             import httpx
 
@@ -58,7 +79,7 @@ def _call_llm(messages: list) -> tuple[str, str]:
                 "content-type": "application/json",
             }
             payload = {
-                "model": "claude-sonnet-4-20250514",
+                "model": "claude-sonnet-4-5-20250929",
                 "max_tokens": 4000,
                 "system": system_msg,
                 "messages": [{"role": "user", "content": user_msg}],
@@ -71,42 +92,29 @@ def _call_llm(messages: list) -> tuple[str, str]:
                     text = data.get("content", [{}])[0].get("text", "")
                     if text:
                         print("=== Claude succeeded ===")
-                        return text, "claude-sonnet-4-20250514"
-                elif resp.status_code == 429:
-                    print("=== Claude rate limited, trying fallback ===")
+                        return text, "claude-3-5-sonnet"
                 else:
-                    print(f"=== Claude returned {resp.status_code}: {resp.text[:200]} ===")
+                    print(f"=== Claude returned {resp.status_code} ===")
         except Exception as e:
-            print(f"=== Claude failed: {type(e).__name__}: {e} ===")
+            print(f"=== Claude failed: {e} ===")
 
-    # Fallback: Groq models (free tier)
+    # Fallback: Groq 8B
     if GROQ_API_KEY:
-        client = Groq(api_key=GROQ_API_KEY, timeout=30.0)
-        groq_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
-
-        for model in groq_models:
-            print(f"=== Calling Groq ({model}) ===")
-            try:
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    temperature=0.45,
-                    max_tokens=6000,
-                )
-                text = response.choices[0].message.content
-                if not text:
-                    raise RuntimeError("Groq returned an empty response")
-                print(f"=== Groq succeeded ({model}) ===")
-                return text, model
-            except Exception as e:
-                error_str = str(e)
-                if "429" in error_str or "rate_limit" in error_str:
-                    print(f"=== {model} rate limited, trying next ===")
-                    continue
-                print(f"=== Groq failed: {type(e).__name__}: {e} ===")
-                continue
-
-    # Fallback: Gemini — removed
+        print("=== Trying Groq 8B ===")
+        try:
+            client = Groq(api_key=GROQ_API_KEY, timeout=30.0)
+            response = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=messages,
+                temperature=0.45,
+                max_tokens=4000,
+            )
+            text = response.choices[0].message.content
+            if text:
+                print("=== Groq 8B succeeded ===")
+                return text, "llama-3.1-8b-instant (fallback)"
+        except Exception as e:
+            print(f"=== Groq 8B failed: {e} ===")
 
     raise RuntimeError("AI analysis is temporarily unavailable due to rate limits. Please try again in a few minutes.")
 
