@@ -1,36 +1,75 @@
 # SUPPORT - Challenger Standards
 
 ## Vision Score
-- **Benchmark**: 1.5+ vision score per minute (e.g., 50+ in a 35-minute game). Below 1.0/min is unacceptable.
-- Place river ward at 1:30 before the enemy jungler's first path reaches bot lane.
-- Upgrade to Control Ward at 2:00.
-- Place deep wards in enemy jungle at 5:00 and 10:00.
-- Have Sweeper active before every objective fight.
-- Be the first to arrive at Dragon/Baron pit to place vision.
+- **Benchmark**: 1.5+ vision score per minute. Below 1.0/min is unacceptable.
+- Place river ward at 1:15 before enemy jungler's first path reaches bot.
+- Upgrade to Control Ward on first back. Place it in river bush or tri-bush.
+- Swap to Sweeper after first back if playing engage. Keep trinket if playing enchanter until 2nd back.
+- Deep ward enemy jungle at 5:00 and after every successful roam.
+- Have Sweeper active 60 seconds before every Dragon/Baron spawn.
+
+## Level 2 & Lane Fundamentals
+- **Level 2 timing**: First wave (3 melee + 3 caster) + 3 melee of second wave = level 2. Hit it first and immediately look for an all-in or zone.
+- **Bush control**: If you control the lane bush, the enemy cannot trade safely. Stand in bush, step out to threaten, step back in. This denies vision of your cooldowns.
+- **Trading stance**: Stand parallel to your ADC, not behind them. If you're behind, the enemy can trade onto your ADC for free.
+- **Body blocking**: Step in front of skillshots aimed at your ADC. Your HP is less valuable than theirs in lane.
 
 ## Roam Timing
-- **When to roam**: Only roam when the bot lane wave is pushed into the enemy tower or just crashed. Never roam with a slow-push wave in the middle of the lane - your ADC will lose the wave and CS.
-- **Level 6 roam**: If your champion has a strong roam ultimate (Shen, Galio, Lux, Nautilus), immediately look for a mid or top roam after the wave crashes. A level 6 roam that results in a kill or Flash burn is always worth it.
-- **After a kill or summoner burn**: If you win a bot lane trade and the enemy burns Flash or dies, immediately roam mid or invade the enemy jungle with your jungler. Do not sit in bot lane doing nothing after winning a fight.
-- **Objective setup**: At 4:30 (before Dragon), leave bot lane and move toward Dragon pit regardless of wave state. Vision setup for Dragon is more valuable than staying in lane.
-- **When NOT to roam**: Never roam if your ADC is low HP, the wave is pushing toward your tower, or the enemy bot lane has priority. A roam that leaves your ADC to die 1v2 is always a mistake.
-- **Roam impact**: A roam must result in a kill, Flash burn, or tower plate. A roam that achieves nothing while your ADC loses 20 CS is a net negative.
+- **When to roam**: Only after wave crashes into enemy tower OR your ADC has a safe freeze near your tower.
+- **Level 6 roam**: Champions with roam ults (Bard, Thresh, Nautilus) should look mid immediately after crashing a wave.
+- **After a kill**: If you win a 2v2, immediately roam mid or invade with jungler. Do not sit in lane.
+- **Objective setup**: Leave lane at 4:30 for Dragon vision setup regardless of wave state.
+- **When NOT to roam**: Never roam if ADC is low HP, wave is pushing toward your tower, or enemy has freeze.
+- **Failed roam cost**: A roam that achieves nothing while ADC loses 2+ waves is a net negative. Commit or don't go.
 
-## Laning Phase
-- Use your body to zone the enemy ADC off CS. Step forward to threaten when the enemy support uses an ability.
-- Recall together with your ADC to maintain lane presence. Never recall when the enemy has a wave advantage.
-- Decide within the first 2 seconds of a fight whether to peel for the ADC or engage on the enemy backline. Hesitation costs fights.
+## Recall Timing
+- Recall WITH your ADC after crashing a cannon wave. Never recall alone leaving ADC in a 1v2.
+- If ADC recalls and you're healthy, stay to hold wave near tower — don't let it crash and bounce.
+- After a kill, crash the wave THEN recall. Do not recall immediately and waste the tempo advantage.
 
 ## Teamfight Positioning
-- Stay within peel range of the carry. Overextending to make a play that leaves the carry unprotected is a positioning error.
-- Engage only when your team is in position. Engaging when your team is split across the map is a critical error.
-- In late game, your primary job is to keep your carries alive. Do not overextend to make plays that leave your ADC unprotected.
+- **Enchanters**: Stay max ability range behind your carry. Shield/heal BEFORE the burst hits, not after.
+- **Engage tanks**: Wait for your team to be within follow-up range. Engaging when team is 2 screens away is griefing.
+- **Peel vs Engage decision**: If enemy has an assassin/diver, peel. If enemy has no dive threat, engage.
+- Decide within 1 second of fight starting: peel or engage. Hesitation = both fail.
+- Exhaust the diver the moment they commit, not after they've already killed your carry.
 
 ## Objective Control
-- After winning a bot lane fight, immediately rotate to Dragon pit.
-- Coordinate with jungler for Dragon and Baron setups.
+- After winning bot fight, ping Dragon and move immediately. Do not recall first.
+- Place control ward in Dragon pit 30 seconds before spawn.
+- During Baron, position to zone enemy approaches — do not stand inside pit hitting Baron.
 
 ## General
 - Every death has a reason: positioning, cooldown tracking, vision failure, or macro error.
 - Deaths within 30 seconds of an objective spawn are critical errors.
-- Never be below 40% HP in a contested area without a clear escape plan.
+- If your ADC dies and you survive, evaluate: could you have body-blocked, exhausted, or CC'd the threat?
+- Track enemy summoner cooldowns. If enemy ADC has no Flash, ping it and look for an engage window.
+
+## Power Spike Timings
+- **Level 2**: Engage supports spike HARD at level 2. Hit it first → all-in or zone.
+- **Level 6**: Enchanters spike at 6 (Lulu R, Janna R). Engage supports spike at 2-3.
+- **First item** (Locket, Moonstone, Shurelya's): ~10-12 min. Enables teamfight contribution.
+- If ADC has BF Sword and enemy doesn't, force trades — you win every 2v2.
+
+## Matchup Adjustments
+- **Engage vs Enchanter**: Engage wins levels 2-5. Enchanter outscales after first item.
+- **Into poke** (Zyra, Brand): All-in early before they poke you out. Don't let them whittle you down.
+- **Into engage** (Nautilus, Leona): Stand behind minion wave. Save your CC to peel, not to trade.
+- **ADC is behind**: Stop engaging. Play for vision and roams. Don't force fights your ADC can't win.
+- **ADC is ahead**: Play aggressive. Zone enemy off CS. Deny them from playing the game.
+
+## Game Clock Transitions
+- **0-14 min**: Lane + roam. Your job is win lane or impact map.
+- **14-20 min**: Vision control. You should be placing 2-3 wards per minute in key areas.
+- **20+ min**: Teamfight enabler. Stay with your carry. Never be caught alone warding.
+- After 20 min, never ward alone. Bring someone or use blue trinket from safety.
+
+## Cooldown Tracking
+- Flash = 300s. Ping enemy Flash timer after every fight.
+- Exhaust = 210s. Track enemy Exhaust for all-in windows.
+- Enemy engage ult (Malphite R, Leona R) = 80-120s. After they use it, you have a window to play aggressive.
+
+## Win Condition Awareness
+- If your ADC is the win condition (hypercarry), peel every fight. Never engage.
+- If your team has an engage comp, look for the 5-man engage. Don't peel — commit forward.
+- If your team is behind, play for picks with vision. Don't force 5v5s.

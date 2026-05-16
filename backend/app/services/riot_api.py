@@ -464,35 +464,62 @@ def extract_timeline_summary(timeline: dict, champion_filter: str | None, player
                     assists = event.get("assistingParticipantIds", [])
                     assist_champs = [pid_to_champ.get(a, "?") for a in assists]
                     assist_str = f" (assists: {', '.join(assist_champs)})" if assist_champs else ""
-                    # Target player's state at that moment
+
+                    # For significant events: snapshot ALL players' positions at this moment
+                    # Use the closest minute frame to show team positioning
+                    nearby_snapshot = all_snapshots.get(t_min_e, {})
+                    team_positions = ""
+                    if nearby_snapshot and t_min_e >= 14:  # Only for mid/late game teamfights
+                        positions = []
+                        for pid, state in nearby_snapshot.items():
+                            champ = pid_to_champ.get(pid, "?")
+                            team = pid_to_team.get(pid, "?")
+                            positions.append(f"{champ}({team[0]})@{state['zone']}")
+                        team_positions = f" [All positions: {', '.join(positions)}]"
+
+                    # Target player's state
                     target_state = ""
                     for tpid in target_pids:
-                        ts = all_snapshots.get(t_min_e, {}).get(tpid)
+                        ts = nearby_snapshot.get(tpid)
                         if ts:
                             target_state = f" [player at {ts['zone']}, {ts['hp_pct']}%HP, lvl{ts['level']}]"
                     # Victim state
                     victim_state = ""
-                    vs = all_snapshots.get(t_min_e, {}).get(victim_id)
+                    vs = nearby_snapshot.get(victim_id)
                     if vs:
                         victim_state = f" [victim was at {vs['hp_pct']}%HP, lvl{vs['level']}]"
+
                     kill_events.append(
-                        f"{t_sec_display}: {k} killed {v} at {zone}{assist_str}{target_state}{victim_state}"
+                        f"{t_sec_display}: {k} killed {v} at {zone}{assist_str}{target_state}{victim_state}{team_positions}"
                     )
 
             elif etype == "ELITE_MONSTER_KILL":
                 monster = event.get("monsterSubType") or event.get("monsterType", "")
-                # Where was the target player?
+                # Where was everyone during this objective?
+                nearby_snapshot = all_snapshots.get(t_min_e, {})
                 target_pos = ""
                 for tpid in target_pids:
-                    ts = all_snapshots.get(t_min_e, {}).get(tpid)
+                    ts = nearby_snapshot.get(tpid)
                     if ts:
                         dist = _dist_to_objective(ts.get("x", 0), ts.get("y", 0), monster)
                         target_pos = f" [player at {ts['zone']}, {dist}]"
+
+                # Show all team positions during objectives
+                obj_positions = ""
+                if nearby_snapshot:
+                    positions = []
+                    for pid, state in nearby_snapshot.items():
+                        champ = pid_to_champ.get(pid, "?")
+                        team = pid_to_team.get(pid, "?")
+                        dist = _dist_to_objective(state.get("x", 0), state.get("y", 0), monster)
+                        positions.append(f"{champ}({team[0]}):{dist}")
+                    obj_positions = f" [Team positions: {', '.join(positions)}]"
+
                 allied = killer_id in target_pids or any(
                     pid_to_team.get(killer_id) == pid_to_team.get(t) for t in target_pids
                 )
                 who = "Allied" if allied else "Enemy"
-                objective_events.append(f"{t_sec_display}: {who} took {monster}{target_pos}")
+                objective_events.append(f"{t_sec_display}: {who} took {monster}{target_pos}{obj_positions}")
 
             elif etype == "ITEM_PURCHASED":
                 pid = event.get("participantId", 0)

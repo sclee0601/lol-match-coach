@@ -34,6 +34,36 @@ def _load_role_standards(role: str) -> str:
     return ""
 
 
+def _get_relevant_standards(role: str, has_laning_deaths: bool, has_late_deaths: bool, has_objectives: bool) -> str:
+    """Load only the relevant sections of role standards based on what happened in the game."""
+    full_standards = _load_role_standards(role)
+    if not full_standards:
+        return ""
+
+    sections = full_standards.split("\n## ")
+    relevant = []
+
+    for section in sections:
+        lower = section.lower()
+        # Always include CS & Gold benchmarks
+        if "cs" in lower and "gold" in lower:
+            relevant.append("## " + section)
+        # Include laning if there were laning deaths
+        if has_laning_deaths and ("laning" in lower or "trading" in lower or "wave" in lower):
+            relevant.append("## " + section)
+        # Include teamfight positioning if there were late game deaths
+        if has_late_deaths and ("teamfight" in lower or "positioning" in lower or "late game" in lower):
+            relevant.append("## " + section)
+        # Include vision if relevant
+        if has_objectives and "vision" in lower:
+            relevant.append("## " + section)
+        # Always include general rules
+        if "general" in lower:
+            relevant.append("## " + section)
+
+    return "\n".join(relevant) if relevant else full_standards
+
+
 def _call_llm(messages: list) -> tuple[str, str]:
     """Call LLM with fallback chain: Groq 70B → Claude → Groq 8B → error."""
 
@@ -169,8 +199,14 @@ def build_prompt(players: list[dict], champion_filter: str | None, timeline_summ
     role = targets[0].get("position", "UNKNOWN").upper() if targets else "UNKNOWN"
     result = "WIN" if targets[0]["win"] else "LOSS"
 
-    # Load role-specific standards
-    role_standards = _load_role_standards(role)
+    # Load role-specific standards based on what happened in the game
+    has_laning_deaths = "killed" in timeline_summary.lower() and any(
+        int(line.split(":")[0]) < 14 for line in timeline_summary.split("\n")
+        if "killed" in line and line[0].isdigit()
+    ) if timeline_summary else False
+    has_late_deaths = "killed" in timeline_summary.lower() if timeline_summary else False
+    has_objectives = "DRAGON" in timeline_summary or "BARON" in timeline_summary or "HERALD" in timeline_summary if timeline_summary else False
+    role_standards = _get_relevant_standards(role, has_laning_deaths, has_late_deaths, has_objectives)
 
     # Identify lane opponent
     opponent_info = ""
@@ -189,10 +225,10 @@ def build_prompt(players: list[dict], champion_filter: str | None, timeline_summ
 
     timeline_section = f"\n{timeline_summary}" if timeline_summary else ""
 
-    # Role standards section (only include if we have them)
+    # Role standards section
     standards_section = ""
     if role_standards:
-        standards_section = f"\n## Role Standards (use these benchmarks to evaluate the player)\n{role_standards}\n"
+        standards_section = f"\n## Role Standards (APPLY these rules when evaluating each event)\n{role_standards}\n"
 
     prompt = f"""## Game Data (All 10 Players)
 Length: {game_length_min} min
@@ -219,16 +255,23 @@ For each death, use this EXACT format:
 - [time]: Killed by [champion] at [zone]. Assists: [list or none]. HP was [X]%. 
   → [ONE fix: what {champ_name} should do in this matchup to avoid this specific death]
 
-### 3. Mid/Late Game Deaths & Objectives
-For each death after 14min, same format as above.
+### 3. Mid/Late Game Deaths & Teamfight Analysis
+For each death AFTER 14 min:
+- Quote the event (timestamp, killer, zone, HP%)
+- Look at ALL player positions provided. Who was nearby? Who was out of position?
+- State the PRIORITY TARGET: who should the team have focused? (the most dangerous enemy near the fight)
+- Was this death caused by: wrong target focus, bad spacing from teammates, or being caught alone?
+- One fix: where should {champ_name} have been relative to teammates?
 
-For objectives: state if player was near or far. One line each.
+For objectives: check ALL player positions. Was the team grouped? Was anyone split? Did enemy contest?
 
-### 4. Top 3 Fixes
-ONLY reference events that actually happened. Format:
-- "At [time], [what happened]. Fix: [one specific action for {champ_name}]."
+### 4. Top 3 Strategic Fixes
+For teamfight deaths, answer:
+- Who should the team have focused? (e.g., "Qiyana was at Mid — frontline should zone her before she reaches ADC")
+- Where should {champ_name} have stood relative to teammates? (e.g., "Stay within Morgana's Black Shield range")
+- What was the team's win condition and did they play around it?
 
-If the player played well (few deaths, good CS, won), say so. Do NOT invent problems.
+ONLY reference actual events. If the player played well, say so.
 """
     return lang_instruction, prompt
 
@@ -252,20 +295,15 @@ def analyze(players: list[dict], champion_filter: str | None = None, timeline_su
     champ_name = targets_for_msg[0]["champion"] if targets_for_msg else "Unknown"
 
     system_msg = (
-        f"You are a Challenger-tier League of Legends coach. "
-        f"{lang_instruction}\n\n"
-        f"ABSOLUTE RULES (violating any = bad response):\n"
-        f"1. ONLY state facts from the data provided. NEVER guess, assume, or infer what happened.\n"
-        f"2. If the player got kills, that is GOOD. Say 'Good kill on [champ] at [time]' — never criticize a kill.\n"
-        f"3. If the player died, state WHO killed them, WHERE, and whether assists suggest a gank.\n"
-        f"4. NEVER say 'enemy's mistake' or 'not a well-executed trade' — you cannot know this from data.\n"
-        f"5. NEVER say 'focus on CSing instead of fighting' after a kill — kills are worth more than 1-2 CS.\n"
-        f"6. For CS analysis: just state the numbers vs benchmark. If behind, check if a death happened before that timestamp (death = missed CS). If no death, say 'likely missed CS during trades or roam'.\n"
-        f"7. BANNED phrases (never use): 'be more cautious', 'be more aggressive', 'enemy's mistake', "
-        f"'not a well-executed trade', 'focus on CSing', 'caught off guard', 'unable to react'.\n"
-        f"8. For each death: state timestamp, killer, zone, assists. Then ONE actionable fix specific to {champ_name}.\n"
-        f"9. If the player had 0 deaths in a phase, say 'Clean phase — no deaths' and move on. Do NOT invent problems.\n"
-        f"10. Keep it SHORT. Max 600 words total."
+        f"You are a Challenger-tier LoL coach. {lang_instruction}\n\n"
+        f"RULES:\n"
+        f"- Only state facts from the data. Never guess.\n"
+        f"- Kills are GOOD. Never criticize a kill.\n"
+        f"- Each death: WHO, WHERE, assists, ONE fix. Analyze each death ONCE only.\n"
+        f"- Section 4 must give NEW macro insights, not repeat earlier deaths.\n"
+        f"- 0 deaths in a phase = 'Clean phase.' Move on.\n"
+        f"- No vague advice. Every sentence needs a timestamp, zone, or number.\n"
+        f"- Max 500 words."
     )
 
     messages = [
