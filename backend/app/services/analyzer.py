@@ -35,8 +35,51 @@ def _load_role_standards(role: str) -> str:
 
 
 def _call_llm(messages: list) -> tuple[str, str]:
-    """Call LLM with fallback chain. Returns (text, model_used)."""
-    # Try Groq models first (best quality)
+    """Call LLM with fallback chain: Claude → Groq 70B → Cloudflare 8B → Gemini."""
+
+    # Primary: Claude 3.5 Sonnet (best quality)
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if anthropic_key:
+        print("=== Calling Claude 3.5 Sonnet ===")
+        try:
+            import httpx
+
+            system_msg = ""
+            user_msg = ""
+            for msg in messages:
+                if msg["role"] == "system":
+                    system_msg = msg["content"]
+                elif msg["role"] == "user":
+                    user_msg = msg["content"]
+
+            headers = {
+                "x-api-key": anthropic_key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            }
+            payload = {
+                "model": "claude-sonnet-4-20250514",
+                "max_tokens": 4000,
+                "system": system_msg,
+                "messages": [{"role": "user", "content": user_msg}],
+            }
+
+            with httpx.Client(timeout=60) as http_client:
+                resp = http_client.post("https://api.anthropic.com/v1/messages", json=payload, headers=headers)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    text = data.get("content", [{}])[0].get("text", "")
+                    if text:
+                        print("=== Claude succeeded ===")
+                        return text, "claude-sonnet-4-20250514"
+                elif resp.status_code == 429:
+                    print("=== Claude rate limited, trying fallback ===")
+                else:
+                    print(f"=== Claude returned {resp.status_code}: {resp.text[:200]} ===")
+        except Exception as e:
+            print(f"=== Claude failed: {type(e).__name__}: {e} ===")
+
+    # Fallback: Groq models (free tier)
     if GROQ_API_KEY:
         client = Groq(api_key=GROQ_API_KEY, timeout=30.0)
         groq_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
@@ -63,79 +106,7 @@ def _call_llm(messages: list) -> tuple[str, str]:
                 print(f"=== Groq failed: {type(e).__name__}: {e} ===")
                 continue
 
-    # Fallback to Cloudflare Workers AI (generous free tier)
-    cf_token = os.getenv("CLOUDFLARE_API_TOKEN", "")
-    cf_account_id = os.getenv("CLOUDFLARE_ACCOUNT_ID", "")
-    if cf_token and cf_account_id:
-        print("=== Falling back to Cloudflare Workers AI ===")
-        try:
-            import httpx
-
-            system_msg = ""
-            user_msg = ""
-            for msg in messages:
-                if msg["role"] == "system":
-                    system_msg = msg["content"]
-                elif msg["role"] == "user":
-                    user_msg = msg["content"]
-
-            url = f"https://api.cloudflare.com/client/v4/accounts/{cf_account_id}/ai/run/@cf/meta/llama-3.1-8b-instruct"
-            headers = {"Authorization": f"Bearer {cf_token}"}
-            payload = {
-                "messages": [
-                    {"role": "system", "content": system_msg},
-                    {"role": "user", "content": user_msg},
-                ],
-                "max_tokens": 4000,
-                "temperature": 0.45,
-            }
-
-            with httpx.Client(timeout=60) as http_client:
-                resp = http_client.post(url, json=payload, headers=headers)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    text = data.get("result", {}).get("response", "")
-                    if text:
-                        print("=== Cloudflare Workers AI succeeded ===")
-                        return text, "cloudflare-llama-3.1-8b (fallback)"
-                else:
-                    print(f"=== Cloudflare returned {resp.status_code}: {resp.text[:200]} ===")
-        except Exception as e:
-            print(f"=== Cloudflare failed: {type(e).__name__}: {e} ===")
-
-    # Fallback to Gemini
-    gemini_key = os.getenv("GEMINI_API_KEY", "")
-    if gemini_key:
-        print("=== Falling back to Gemini ===")
-        try:
-            from google import genai
-
-            client = genai.Client(api_key=gemini_key)
-
-            system_msg = ""
-            user_msg = ""
-            for msg in messages:
-                if msg["role"] == "system":
-                    system_msg = msg["content"]
-                elif msg["role"] == "user":
-                    user_msg = msg["content"]
-
-            prompt = f"{system_msg}\n\n{user_msg}" if system_msg else user_msg
-
-            response = client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=prompt,
-            )
-            text = response.text
-            if not text:
-                raise RuntimeError("Gemini returned an empty response")
-            print("=== Gemini succeeded ===")
-            return text, "gemini-2.0-flash (fallback)"
-        except Exception as e:
-            error_msg = str(e)
-            print(f"=== Gemini failed: {type(e).__name__}: {e} ===")
-            if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
-                pass
+    # Fallback: Gemini — removed
 
     raise RuntimeError("AI analysis is temporarily unavailable due to rate limits. Please try again in a few minutes.")
 
