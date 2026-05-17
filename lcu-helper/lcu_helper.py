@@ -251,15 +251,56 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
     team_has_poke = ally_tags.count("poke") >= 2
     team_has_dive = ally_tags.count("dive") >= 2
 
+    # Count frontline vs carries — team needs enough tanks for teamfights
+    team_tank_count = ally_tags.count("tank") + ally_tags.count("engage") // 2
+    team_carry_count = ally_tags.count("hypercarry") + ally_tags.count("sustain_dps") + ally_tags.count("burst") // 2
+    team_needs_frontline = team_carry_count >= 2 and team_tank_count <= 1  # multiple carries but only 1 tank = need frontline
+
     # What is enemy comp threatening?
     # Use >= 1 for strong archetypes (a single Nautilus IS an engage threat)
     enemy_has_dive = enemy_tags.count("dive") >= 2 or enemy_tags.count("burst") >= 2
     enemy_has_poke = enemy_tags.count("poke") >= 2
     enemy_has_engage = "engage" in enemy_tags or "tank" in enemy_tags  # single engage/tank is already a threat
+    enemy_has_heavy_engage = enemy_tags.count("engage") >= 2 or (enemy_tags.count("engage") >= 1 and enemy_tags.count("tank") >= 2)  # J4+Ornn, Leona+Amumu etc.
     enemy_has_pick = "pick" in enemy_tags  # single pick champion is a threat (e.g. Nautilus R)
     enemy_has_split = "split" in enemy_tags
     enemy_has_hypercarry = "hypercarry" in enemy_tags
     enemy_has_scaling = enemy_has_hypercarry or enemy_tags.count("sustain_dps") >= 2
+
+    # --- Bot lane duo archetype detection ---
+    # Identify enemy bot lane type by looking at their ADC+Support combo
+    # This gives a bot-lane-specific bonus for ADC/Support ideal picks
+    enemy_bot_archetype = ""  # poke_safe, all_in, sustain, scaling
+    enemy_bot_tags = []
+    for enemy in enemy_picks:
+        etags = CHAMPION_TAGS.get(enemy, [])
+        # Detect if this enemy is a bot laner (ADC or support)
+        is_bot = any(t in etags for t in ["sustain_dps", "hypercarry", "lane_bully", "safe", "siege",
+                                           "enchanter", "peel", "engage", "tank", "pick"])
+        # More specific: check if it's in known ADC or support sets
+        if enemy in {"Jinx","KogMaw","Vayne","Caitlyn","Draven","Lucian","Ezreal","Varus","Jhin",
+                     "Ashe","MissFortune","Kaisa","Xayah","Samira","Tristana","Sivir","Aphelios",
+                     "Twitch","Zeri","Smolder","Nilah","Kalista","Corki","Ziggs","Seraphine",
+                     "Veigar","Hwei","Mel","Brand","Swain","Karthus","Senna",
+                     "Thresh","Nautilus","Leona","Alistar","Blitzcrank","Pyke","Rakan","Rell",
+                     "Milio","Lulu","Janna","Soraka","Nami","Yuumi","Sona","Karma","Morgana",
+                     "Lux","Zyra","Xerath","Braum","Renata","Bard","TahmKench","Poppy","Taric"}:
+            enemy_bot_tags.extend(etags)
+
+    # Classify enemy bot duo archetype
+    bot_has_poke = enemy_bot_tags.count("poke") >= 1 and ("safe" in enemy_bot_tags or "enchanter" in enemy_bot_tags)
+    bot_has_allin = ("engage" in enemy_bot_tags or "tank" in enemy_bot_tags) and ("burst" in enemy_bot_tags or "lane_bully" in enemy_bot_tags or "dive" in enemy_bot_tags)
+    bot_has_sustain = "enchanter" in enemy_bot_tags and ("sustain" in enemy_bot_tags or "peel" in enemy_bot_tags)
+    bot_has_scaling = "hypercarry" in enemy_bot_tags or ("sustain_dps" in enemy_bot_tags and "enchanter" in enemy_bot_tags)
+
+    if bot_has_allin:
+        enemy_bot_archetype = "all_in"      # Counter: safe/scaling ADCs, disengage supports
+    elif bot_has_poke:
+        enemy_bot_archetype = "poke_safe"   # Counter: all-in ADCs, engage supports
+    elif bot_has_scaling:
+        enemy_bot_archetype = "scaling"     # Counter: lane bullies, early aggression
+    elif bot_has_sustain:
+        enemy_bot_archetype = "sustain"     # Counter: all-in, burst
 
     # Get role-appropriate champions from profile
     # Use mastery pool (actual mains) as primary, fall back to recent picks
@@ -322,6 +363,11 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
             comp_bonus += 1
         if team_has_dive and "dive" in pick_tags:
             comp_bonus += 1
+        # Team needs frontline — multiple carries but not enough tanks
+        if team_needs_frontline and ("tank" in pick_tags or ("engage" in pick_tags and "tank" in pick_tags)):
+            comp_bonus += 4  # Critical: team will lose teamfights without frontline
+        if team_needs_frontline and "split" in pick_tags and "tank" not in pick_tags:
+            comp_bonus -= 2  # Another squishy split pusher makes the problem worse
 
         # Counter enemy comp
         if enemy_has_dive and ("peel" in pick_tags or "enchanter" in pick_tags):
@@ -336,6 +382,82 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
             comp_bonus += 1  # Force 5v5 vs split
         if enemy_has_scaling and ("engage" in pick_tags or "all_in" in pick_tags or "lane_bully" in pick_tags):
             comp_bonus += 3  # Punish scaling comps with early aggression
+
+        # Heavy engage penalty/bonus (J4+Ornn, Leona+Amumu etc.)
+        # ADCs NEED escapes, supports NEED disengage
+        if enemy_has_heavy_engage:
+            if norm_role == "BOTTOM":
+                if "safe" in pick_tags:
+                    comp_bonus += 4  # Ezreal E, Xayah R, Tristana W
+                elif "long_range" in pick_tags and "safe" not in pick_tags:
+                    comp_bonus += 0  # range helps but no escape = risky
+                if "short_range" in pick_tags and "safe" not in pick_tags:
+                    comp_bonus -= 3  # immobile short range = dead (Vayne, Kai'Sa, Samira)
+                if "hypercarry" in pick_tags and "safe" not in pick_tags:
+                    comp_bonus -= 2  # Jinx/Kog/Aphelios die to engage
+            elif norm_role == "UTILITY":
+                if "peel" in pick_tags or "enchanter" in pick_tags:
+                    comp_bonus += 4  # Janna R, Lulu R, Morgana E
+                if "engage" in pick_tags and "peel" not in pick_tags:
+                    comp_bonus -= 2  # more engage doesn't help vs engage
+
+        # Bot lane duo archetype counter (only for ADC/Support picks)
+        if norm_role in ("BOTTOM", "UTILITY") and enemy_bot_archetype:
+            if enemy_bot_archetype == "poke_safe":
+                # Counter poke/safe: need hard engage + lane bullies that force fights
+                # Long-range ADCs that can trade back are also good
+                if norm_role == "BOTTOM":
+                    if "lane_bully" in pick_tags and "short_range" not in pick_tags:
+                        comp_bonus += 3  # lane bullies with range (Cait, Varus)
+                    elif "lane_bully" in pick_tags:
+                        comp_bonus += 2  # short range bullies (Draven, Lucian) - riskier but can work
+                    if "long_range" in pick_tags:
+                        comp_bonus += 2  # can trade poke back
+                    if "hypercarry" in pick_tags or "sustain_dps" in pick_tags:
+                        comp_bonus -= 2  # weak laners get destroyed by poke
+                if norm_role == "UTILITY":
+                    if "engage" in pick_tags or "tank" in pick_tags:
+                        comp_bonus += 4  # hard engage forces fights on squishy poke duo
+                    if "pick" in pick_tags:
+                        comp_bonus += 2  # hooks punish immobile poke champs
+            elif enemy_bot_archetype == "all_in":
+                # Counter all-in: need disengage, range, or safe picks
+                if norm_role == "BOTTOM":
+                    if "long_range" in pick_tags:
+                        comp_bonus += 3  # outrange the engage
+                    if "safe" in pick_tags:
+                        comp_bonus += 2  # escape tools
+                    if "short_range" in pick_tags and "safe" not in pick_tags:
+                        comp_bonus -= 2  # short range = easy target for engage
+                if norm_role == "UTILITY":
+                    if "peel" in pick_tags or "enchanter" in pick_tags:
+                        comp_bonus += 3  # disengage counters engage
+                    if "engage" in pick_tags and "peel" not in pick_tags:
+                        comp_bonus -= 1  # pure engage vs engage is coinflip
+            elif enemy_bot_archetype == "scaling":
+                # Counter scaling: punish weak early with aggression
+                if norm_role == "BOTTOM":
+                    if "lane_bully" in pick_tags:
+                        comp_bonus += 4  # dominate lane before they scale
+                    if "burst" in pick_tags:
+                        comp_bonus += 2  # kill pressure early
+                    if "hypercarry" in pick_tags:
+                        comp_bonus -= 2  # scaling vs scaling = no advantage
+                if norm_role == "UTILITY":
+                    if "engage" in pick_tags or "tank" in pick_tags:
+                        comp_bonus += 3  # force fights early
+                    if "pick" in pick_tags:
+                        comp_bonus += 2  # catch the weak laner
+            elif enemy_bot_archetype == "sustain":
+                # Counter sustain: burst/all-in before they heal back
+                if norm_role == "BOTTOM":
+                    if "burst" in pick_tags or "lane_bully" in pick_tags:
+                        comp_bonus += 3
+                if norm_role == "UTILITY":
+                    if "engage" in pick_tags or "tank" in pick_tags:
+                        comp_bonus += 3
+                    if "pick" in pick_tags:
+                        comp_bonus += 2
 
         candidates.append({
             "champion": champ,
@@ -415,7 +537,8 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
         # Role filter
         role_fits = False
         if norm_role == "UTILITY" and ("enchanter" in tags or "peel" in tags or "engage" in tags or "tank" in tags or "pick" in tags):
-            role_fits = True
+            if champ not in ADC_CHAMPIONS and champ not in JUNGLE_CHAMPIONS and champ not in TOP_CHAMPIONS and champ not in MID_CHAMPIONS:
+                role_fits = True
         elif norm_role == "BOTTOM" and champ in ADC_CHAMPIONS:
             role_fits = True
         elif norm_role == "MIDDLE" and ("burst" in tags or "poke" in tags or "sustain_dps" in tags or "roam" in tags):
@@ -431,7 +554,12 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
         if not role_fits:
             continue
 
-        matchup = evaluate_pick_vs_enemies(champ, enemy_picks)
+        # For bot lane picks, only evaluate matchup against enemy bot laners (not top/jg/mid)
+        if norm_role in ("BOTTOM", "UTILITY"):
+            bot_enemies = [e for e in enemy_picks if e not in TOP_CHAMPIONS and e not in JUNGLE_CHAMPIONS and e not in MID_CHAMPIONS]
+            matchup = evaluate_pick_vs_enemies(champ, bot_enemies) if bot_enemies else {"matchup_score": 0, "details": []}
+        else:
+            matchup = evaluate_pick_vs_enemies(champ, enemy_picks)
         comp_bonus = 0
 
         if not team_has_engage and ("engage" in tags or "tank" in tags):
@@ -440,6 +568,11 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
             comp_bonus += 2
         if team_has_hypercarry and ("peel" in tags or "hypercarry_enabler" in tags):
             comp_bonus += 3
+        # Team needs frontline
+        if team_needs_frontline and ("tank" in tags or ("engage" in tags and "tank" in tags)):
+            comp_bonus += 4
+        if team_needs_frontline and "split" in tags and "tank" not in tags:
+            comp_bonus -= 2
         if enemy_has_dive and ("peel" in tags or "enchanter" in tags):
             comp_bonus += 3
         if enemy_has_poke and ("engage" in tags or "dive" in tags):
@@ -450,6 +583,79 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
             comp_bonus += 2
         if enemy_has_scaling and ("engage" in tags or "all_in" in tags or "lane_bully" in tags):
             comp_bonus += 3
+
+        # Heavy engage penalty/bonus for ideal picks
+        if enemy_has_heavy_engage:
+            if norm_role == "BOTTOM":
+                if "safe" in tags:
+                    comp_bonus += 6  # Ezreal E, Xayah R, Tristana W — MUST have escape
+                if "short_range" in tags and "safe" not in tags:
+                    comp_bonus -= 5  # immobile short range = dead
+                if "hypercarry" in tags and "safe" not in tags:
+                    comp_bonus -= 4  # Jinx/Kog/Aphelios die to engage
+            elif norm_role == "UTILITY":
+                if "peel" in tags or "enchanter" in tags:
+                    comp_bonus += 5  # Janna R, Lulu R, Morgana E
+                if "engage" in tags and "peel" not in tags:
+                    comp_bonus -= 3  # more engage doesn't help vs engage
+
+        # Bot lane duo archetype counter (only for ADC/Support ideal picks)
+        if norm_role in ("BOTTOM", "UTILITY") and enemy_bot_archetype:
+            if enemy_bot_archetype == "poke_safe":
+                # Counter poke/safe: need hard engage + lane bullies that force fights
+                # Long-range ADCs that can trade back are also good
+                if norm_role == "BOTTOM":
+                    if "lane_bully" in tags and "short_range" not in tags:
+                        comp_bonus += 3  # lane bullies with range (Cait, Varus)
+                    elif "lane_bully" in tags:
+                        comp_bonus += 2  # short range bullies (Draven, Lucian) - riskier but can work
+                    if "long_range" in tags:
+                        comp_bonus += 2  # can trade poke back
+                    if "hypercarry" in tags or "sustain_dps" in tags:
+                        comp_bonus -= 2  # weak laners get destroyed by poke
+                if norm_role == "UTILITY":
+                    if "engage" in tags or "tank" in tags:
+                        comp_bonus += 4  # hard engage forces fights on squishy poke duo
+                    if "pick" in tags:
+                        comp_bonus += 2  # hooks punish immobile poke champs
+            elif enemy_bot_archetype == "all_in":
+                # Counter all-in: need disengage, range, or safe picks
+                if norm_role == "BOTTOM":
+                    if "long_range" in tags:
+                        comp_bonus += 3  # outrange the engage
+                    if "safe" in tags:
+                        comp_bonus += 2  # escape tools
+                    if "short_range" in tags and "safe" not in tags:
+                        comp_bonus -= 2  # short range = easy target for engage
+                if norm_role == "UTILITY":
+                    if "peel" in tags or "enchanter" in tags:
+                        comp_bonus += 3  # disengage counters engage
+                    if "engage" in tags and "peel" not in tags:
+                        comp_bonus -= 1  # pure engage vs engage is coinflip
+            elif enemy_bot_archetype == "scaling":
+                # Counter scaling: punish weak early with aggression
+                if norm_role == "BOTTOM":
+                    if "lane_bully" in tags:
+                        comp_bonus += 4  # dominate lane before they scale
+                    if "burst" in tags:
+                        comp_bonus += 2  # kill pressure early
+                    if "hypercarry" in tags:
+                        comp_bonus -= 2  # scaling vs scaling = no advantage
+                if norm_role == "UTILITY":
+                    if "engage" in tags or "tank" in tags:
+                        comp_bonus += 3  # force fights early
+                    if "pick" in tags:
+                        comp_bonus += 2  # catch the weak laner
+            elif enemy_bot_archetype == "sustain":
+                # Counter sustain: burst/all-in before they heal back
+                if norm_role == "BOTTOM":
+                    if "burst" in tags or "lane_bully" in tags:
+                        comp_bonus += 3
+                if norm_role == "UTILITY":
+                    if "engage" in tags or "tank" in tags:
+                        comp_bonus += 3
+                    if "pick" in tags:
+                        comp_bonus += 2
 
         # For solo lanes, factor in lane strength as a counter-pick signal
         lane_bonus = 0
@@ -470,14 +676,14 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
         })
 
     # Sort differently based on role:
-    # Solo lanes (TOP/MID): matchup counters > lane strength > comp fit
-    # Bot lane (ADC/SUPPORT): matchup > comp (since we have bot-specific matchup data)
+    # Solo lanes (TOP/MID): comp fit > matchup > lane strength (team comp matters most for draft)
+    # Bot lane (ADC/SUPPORT): matchup > comp (lane matchup is critical in bot)
     # Jungle: comp fit > matchup
     if norm_role in ("TOP", "MIDDLE"):
         ideal_candidates.sort(key=lambda x: (
-            -(x["matchup_score"] * 25),
-            -(x["lane_bonus"] * 15),
-            -(x["comp_bonus"] * 10),
+            -(x["comp_bonus"] * 20),
+            -(x["matchup_score"] * 15),
+            -(x["lane_bonus"] * 10),
         ))
     elif norm_role == "JUNGLE":
         ideal_candidates.sort(key=lambda x: (
@@ -732,6 +938,7 @@ class MatchCoachApp:
                         draft = parse_session(session)
                         draft_key = f"{draft['bans']}_{draft['ally_picks']}_{draft['enemy_picks']}_{draft['my_champ']}"
                         if not hasattr(self, '_last_draft_key') or self._last_draft_key != draft_key:
+                            self._current_queue_id = queue_id
                             self._display_draft(session)
                             self._last_draft_key = draft_key
                     self._last_state = 'champ_select'
@@ -776,22 +983,16 @@ class MatchCoachApp:
 
         try:
             recs = get_recommendations(self.profile, draft["my_role"], draft["ally_picks"], draft["enemy_picks"], draft["bans"])
-            # Generate ideal picks per unfilled role (for teammates)
+            # Always generate team needs for ALL unfilled roles (including local user's role)
             unpicked = draft.get("unpicked_roles", [])
-            # If we haven't picked yet, show ideal for our role (normal behavior)
-            # If we already picked, show ideal for each remaining role
-            if draft["my_champ"] and unpicked:
-                team_ideals = []
-                for role in unpicked:
-                    role_recs = get_recommendations(self.profile, role, draft["ally_picks"], draft["enemy_picks"], draft["bans"])
-                    if role_recs.get("ideal_picks"):
-                        best = role_recs["ideal_picks"][0]
-                        best["role"] = role
-                        team_ideals.append(best)
-                recs["team_ideals"] = team_ideals
-                recs["ideal_picks"] = []  # clear single-role ideal
-            else:
-                recs["team_ideals"] = []
+            team_ideals = []
+            for role in unpicked:
+                role_recs = get_recommendations(self.profile, role, draft["ally_picks"], draft["enemy_picks"], draft["bans"])
+                if role_recs.get("ideal_picks"):
+                    best = role_recs["ideal_picks"][0]
+                    best["role"] = role
+                    team_ideals.append(best)
+            recs["team_ideals"] = team_ideals
         except Exception as e:
             tk.Frame(f, height=1, bg="#1f2937").pack(fill="x", pady=12)
             tk.Label(f, text=f"⚠ Error loading recommendations", font=("Segoe UI", 10),
@@ -803,8 +1004,9 @@ class MatchCoachApp:
         # Separator
         tk.Frame(f, height=1, bg="#1f2937").pack(fill="x", pady=12)
 
-        # Ban suggestions with context
-        if recs["ban_suggestions"]:
+        # Ban suggestions — only show for Clash (700) and Flex (440) where you can scout
+        show_bans = getattr(self, '_current_queue_id', None) in (440, 700)
+        if show_bans and recs["ban_suggestions"]:
             tk.Label(f, text="🚫 BAN THESE", font=("Segoe UI", 10, "bold"),
                      fg="#ef4444", bg="#0d1117").pack(anchor="w")
             for b in recs["ban_suggestions"]:
@@ -854,30 +1056,7 @@ class MatchCoachApp:
             tk.Label(f, text="", bg="#0d1117").pack()
 
         # Ideal picks (best for situation, regardless of user's pool)
-        if recs.get("ideal_picks"):
-            role_display = {"top": "TOP", "jungle": "JG", "middle": "MID", "bottom": "ADC", "utility": "SUP"}
-            tk.Label(f, text="💡 IDEAL FOR THIS SITUATION", font=("Segoe UI", 10, "bold"),
-                     fg="#f0c040", bg="#0d1117").pack(anchor="w")
-            for p in recs["ideal_picks"]:
-                pick_frame = tk.Frame(f, bg="#0d1117")
-                pick_frame.pack(anchor="w", fill="x", pady=2)
-                self._load_champ_image(pick_frame, p["champion"])
-                info_frame = tk.Frame(pick_frame, bg="#0d1117")
-                info_frame.pack(side="left", padx=(8, 0))
-                tk.Label(info_frame, text=f"{p['champion']}",
-                         font=("Segoe UI", 10, "bold"), fg="#fde68a", bg="#0d1117").pack(anchor="w")
-                ctx = get_matchup_context(p["champion"])
-                if ctx.get("tip"):
-                    tk.Label(info_frame, text=ctx["tip"], font=("Segoe UI", 8),
-                             fg="#9ca3af", bg="#0d1117").pack(anchor="w")
-                if p.get("matchup_details"):
-                    for detail in p["matchup_details"]:
-                        color = "#86efac" if "유리" in detail else "#fca5a5"
-                        tk.Label(info_frame, text=detail, font=("Segoe UI", 8),
-                                 fg=color, bg="#0d1117").pack(anchor="w")
-            tk.Label(f, text="", bg="#0d1117").pack()
-
-        # Team ideals (when you already picked — show best pick per remaining role)
+        # Team needs — best pick per unfilled role (for all teammates including you)
         if recs.get("team_ideals"):
             role_display = {"top": "TOP", "jungle": "JG", "middle": "MID", "bottom": "ADC", "utility": "SUP"}
             tk.Label(f, text="💡 TEAM NEEDS", font=("Segoe UI", 10, "bold"),

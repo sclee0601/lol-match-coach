@@ -341,9 +341,10 @@ MATCHUPS: dict[str, dict[str, int]] = {
     # --- ADC vs Support interactions ---
     "Caitlyn": {
         "Vayne": -1, "Samira": -1,
-        "Nautilus": 1, "Leona": 1,  # outranges engage, traps when they go in
-        "Sona": 2, "Soraka": 1,  # pokes enchanters out
-        "KogMaw": 2, "Jinx": 2, "Twitch": 2, "Aphelios": 1,
+        "Veigar": -2, "Ziggs": -2, "Yasuo": -2, "Sivir": -1,  # countered by these
+        "Nautilus": 1, "Leona": 1,
+        "Sona": 2, "Soraka": 1,
+        "Kalista": 2, "Aphelios": 2, "KogMaw": 2, "Jinx": 2, "Twitch": 2,  # Cait counters these
     },
     "Draven": {
         "Caitlyn": -1, "Ezreal": -1,
@@ -365,8 +366,10 @@ MATCHUPS: dict[str, dict[str, int]] = {
     # --- ADCs ---
     "Jinx": {
         "Draven": -3, "Lucian": -2, "Caitlyn": -2, "Tristana": -1,
-        "Nautilus": -2, "Leona": -2,  # weak to hard engage supports
-        "Lux": -1,  # easy to hit with Q
+        "Nautilus": -2, "Leona": -2,
+        "Swain": -2, "Veigar": -2, "Twitch": -2, "Nilah": -2,  # hard countered
+        "Lux": -1,
+        "Kaisa": 2, "Kalista": 2, "Varus": 1, "Zeri": 1,  # Jinx counters these
         "Ezreal": 1, "KogMaw": 1,
     },
     "KogMaw": {
@@ -376,13 +379,15 @@ MATCHUPS: dict[str, dict[str, int]] = {
     },
     "Varus": {
         "Samira": -2, "Lucian": -1,
-        "Nautilus": -1, "Leona": -1,  # immobile, vulnerable to engage
-        "KogMaw": 1, "Jinx": 1,
+        "Nautilus": -1, "Leona": -1,
+        "MissFortune": -2, "Jinx": -1,  # outscaled/outpoked
+        "Kaisa": 2, "KogMaw": 1, "Aphelios": 1,  # Varus counters these
     },
     "Kaisa": {
         "Caitlyn": -2, "Draven": -1,
-        "Nautilus": 0,  # can E away but short range
-        "Ezreal": 1, "Jinx": 1,
+        "MissFortune": -2, "Jinx": -2, "Xayah": -2, "Varus": -2, "Sivir": -1, "Ashe": -1,  # countered by these
+        "Nautilus": 0,
+        "Ezreal": 1, "Smolder": 1, "Vayne": 1,  # Kai'Sa counters these
     },
     "Vayne": {
         "Caitlyn": -2, "Draven": -2, "Lucian": -1,
@@ -425,12 +430,16 @@ MATCHUPS: dict[str, dict[str, int]] = {
     "MissFortune": {
         "Draven": -1, "Lucian": -1,
         "Nautilus": -1, "Leona": -1,  # immobile during R
+        "Nilah": -2, "KogMaw": -2, "Swain": -2, "Yasuo": -2,  # hard countered by these
+        "Kaisa": 2, "Kalista": 2, "Varus": 2, "Aphelios": 2, "Samira": 1,  # MF counters these
         "Caitlyn": 1,  # Q poke trades well
         "Jinx": 1, "KogMaw": 1,
     },
     "Smolder": {
         "Draven": -2, "Lucian": -2, "Caitlyn": -1,
-        "Nautilus": -1, "Leona": -1,  # weak early, punished by engage
+        "Nautilus": -1, "Leona": -1,
+        "MissFortune": -1, "Jinx": -1,  # punished early
+        "Kaisa": -1,  # Kai'Sa counters Smolder
         "Ezreal": 1,
     },
 
@@ -507,14 +516,20 @@ def evaluate_pick_vs_enemies(my_champ: str, enemy_picks: list[str]) -> dict:
                 details.append(f"vs {enemy}: 불리 ({score})")
             total_score += score
 
-    # Also check reverse — does the enemy counter us?
+    # Also check reverse — use enemy's matchup data about us
     for enemy in enemy_picks:
+        if get_matchup_score(my_champ, enemy) != 0:
+            continue  # already counted in forward check
         enemy_matchups = MATCHUPS.get(enemy, {})
         reverse_score = enemy_matchups.get(my_champ, 0)
-        if reverse_score > 0 and get_matchup_score(my_champ, enemy) == 0:
-            # Enemy has a known advantage over us that we didn't already count
+        if reverse_score > 0:
+            # Enemy has a known advantage over us
             details.append(f"vs {enemy}: 불리 (상대 상성)")
             total_score -= reverse_score
+        elif reverse_score < 0:
+            # Enemy is weak against us (we counter them)
+            details.append(f"vs {enemy}: 유리 (상대 약점 +{-reverse_score})")
+            total_score += (-reverse_score)
 
     return {
         "champion": my_champ,
@@ -534,24 +549,24 @@ CHAMPION_TAGS: dict[str, list[str]] = {
     "Jinx": ["sustain_dps", "hypercarry"],
     "KogMaw": ["sustain_dps", "hypercarry"],
     "Twitch": ["sustain_dps", "hypercarry"],
-    "Vayne": ["sustain_dps", "hypercarry", "split"],
+    "Vayne": ["sustain_dps", "hypercarry", "split", "short_range"],
     "Aphelios": ["sustain_dps", "hypercarry"],
     "Zeri": ["sustain_dps", "hypercarry"],
     "Smolder": ["sustain_dps", "hypercarry", "poke"],
-    "Caitlyn": ["poke", "siege"],
+    "Caitlyn": ["poke", "siege", "long_range", "lane_bully"],
     "Ezreal": ["poke", "safe"],
-    "Varus": ["poke", "engage"],
-    "Jhin": ["poke", "pick", "utility"],
-    "Ashe": ["utility", "engage", "poke"],
+    "Varus": ["poke", "engage", "long_range"],
+    "Jhin": ["poke", "pick", "utility", "long_range"],
+    "Ashe": ["utility", "engage", "poke", "long_range"],
     "MissFortune": ["burst", "wombo"],
     "Xayah": ["sustain_dps", "safe"],
-    "Kaisa": ["burst", "dive", "sustain_dps"],
-    "Lucian": ["burst", "lane_bully"],
-    "Draven": ["burst", "lane_bully"],
-    "Samira": ["dive", "burst"],
-    "Nilah": ["dive", "burst"],
+    "Kaisa": ["burst", "dive", "sustain_dps", "short_range"],
+    "Lucian": ["burst", "lane_bully", "short_range"],
+    "Draven": ["burst", "lane_bully", "short_range"],
+    "Samira": ["dive", "burst", "short_range"],
+    "Nilah": ["dive", "burst", "short_range"],
     "Kalista": ["sustain_dps", "engage", "utility"],
-    "Tristana": ["burst", "siege", "safe"],
+    "Tristana": ["burst", "siege", "safe", "long_range"],
     "Sivir": ["sustain_dps", "siege", "utility"],
     "Ziggs": ["poke", "siege"],
     "Corki": ["poke", "burst"],
@@ -579,7 +594,7 @@ CHAMPION_TAGS: dict[str, list[str]] = {
     "Brand": ["poke", "burst", "wombo"],
     "Xerath": ["poke", "siege"],
     "Vel'Koz": ["poke", "siege"],
-    "Senna": ["sustain", "poke", "utility"],
+    "Senna": ["sustain", "poke", "utility", "long_range"],
     "TahmKench": ["peel", "tank"],
     "Braum": ["peel", "tank"],
     "Renata": ["enchanter", "peel"],
