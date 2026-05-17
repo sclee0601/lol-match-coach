@@ -252,9 +252,11 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
     team_has_dive = ally_tags.count("dive") >= 2
 
     # What is enemy comp threatening?
+    # Use >= 1 for strong archetypes (a single Nautilus IS an engage threat)
     enemy_has_dive = enemy_tags.count("dive") >= 2 or enemy_tags.count("burst") >= 2
     enemy_has_poke = enemy_tags.count("poke") >= 2
-    enemy_has_engage = enemy_tags.count("engage") >= 2
+    enemy_has_engage = "engage" in enemy_tags or "tank" in enemy_tags  # single engage/tank is already a threat
+    enemy_has_pick = "pick" in enemy_tags  # single pick champion is a threat (e.g. Nautilus R)
     enemy_has_split = "split" in enemy_tags
     enemy_has_hypercarry = "hypercarry" in enemy_tags
     enemy_has_scaling = enemy_has_hypercarry or enemy_tags.count("sustain_dps") >= 2
@@ -274,7 +276,7 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
         role_fits = False
         if norm_role == "UTILITY" and ("enchanter" in champ_tags or "peel" in champ_tags or "engage" in champ_tags or "tank" in champ_tags or "pick" in champ_tags):
             role_fits = True
-        elif norm_role == "BOTTOM" and ("sustain_dps" in champ_tags or "hypercarry" in champ_tags or "burst" in champ_tags or "poke" in champ_tags or "safe" in champ_tags):
+        elif norm_role == "BOTTOM" and ("sustain_dps" in champ_tags or "hypercarry" in champ_tags or "lane_bully" in champ_tags or "poke" in champ_tags or "safe" in champ_tags or "siege" in champ_tags):
             role_fits = True
         elif norm_role == "MIDDLE" and ("burst" in champ_tags or "poke" in champ_tags or "assassin" in champ_tags or "sustain_dps" in champ_tags or "roam" in champ_tags):
             role_fits = True
@@ -316,6 +318,8 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
             comp_bonus += 2  # Engage counters poke
         if enemy_has_engage and ("peel" in pick_tags or "safe" in pick_tags):
             comp_bonus += 2  # Disengage counters engage
+        if enemy_has_pick and ("safe" in pick_tags or "peel" in pick_tags):
+            comp_bonus += 2  # Safe/peel counters pick comps (e.g. vs Nautilus R)
         if enemy_has_split and ("engage" in pick_tags or "wombo" in pick_tags):
             comp_bonus += 1  # Force 5v5 vs split
         if enemy_has_scaling and ("engage" in pick_tags or "all_in" in pick_tags or "lane_bully" in pick_tags):
@@ -364,7 +368,7 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
         role_fits = False
         if norm_role == "UTILITY" and ("enchanter" in tags or "peel" in tags or "engage" in tags or "tank" in tags or "pick" in tags):
             role_fits = True
-        elif norm_role == "BOTTOM" and ("sustain_dps" in tags or "hypercarry" in tags or "burst" in tags or "safe" in tags):
+        elif norm_role == "BOTTOM" and ("sustain_dps" in tags or "hypercarry" in tags or "lane_bully" in tags or "safe" in tags or "siege" in tags):
             role_fits = True
         elif norm_role == "MIDDLE" and ("burst" in tags or "poke" in tags or "sustain_dps" in tags or "roam" in tags):
             role_fits = True
@@ -391,6 +395,8 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
         if enemy_has_poke and ("engage" in tags or "dive" in tags):
             comp_bonus += 2
         if enemy_has_engage and ("peel" in tags or "safe" in tags):
+            comp_bonus += 2
+        if enemy_has_pick and ("safe" in tags or "peel" in tags):
             comp_bonus += 2
         if enemy_has_scaling and ("engage" in tags or "all_in" in tags or "lane_bully" in tags):
             comp_bonus += 3

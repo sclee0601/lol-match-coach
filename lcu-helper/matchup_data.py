@@ -43,6 +43,17 @@ CHAMPION_DATA: dict[str, dict] = {
     "TahmKench": {"lane": 4, "late": 2, "style": "tank/peel", "tip": "Devour saves allies. Strong 1v1 early."},
     "Poppy": {"lane": 3, "late": 3, "style": "peel/anti-dash", "tip": "W blocks dashes. Counters engage supports."},
     "Galio": {"lane": 3, "late": 4, "style": "engage/roam", "tip": "R follows jungler ganks. Tanky AP."},
+    "Blitzcrank": {"lane": 4, "late": 2, "style": "pick/engage", "tip": "One hook = kill. Zoning threat. Falls off if missing Qs."},
+    "Zyra": {"lane": 4, "late": 3, "style": "poke/zone", "tip": "Plant poke dominates lane. R zone control in fights."},
+    "Brand": {"lane": 4, "late": 4, "style": "poke/burst", "tip": "Passive burn melts teams. High damage support. Squishy."},
+    "Xerath": {"lane": 4, "late": 3, "style": "poke/siege", "tip": "Long range poke. Wins lane from distance. No peel."},
+    "Vel'Koz": {"lane": 4, "late": 3, "style": "poke/burst", "tip": "True damage passive. Geometry poke. Immobile."},
+    "Yuumi": {"lane": 1, "late": 5, "style": "enchanter/attach", "tip": "Untargetable on carry. Hyperscales. Useless alone."},
+    "Sona": {"lane": 2, "late": 5, "style": "enchanter/sustain", "tip": "Weak lane, insane teamfight auras late. R stun."},
+    "Swain": {"lane": 3, "late": 4, "style": "sustain/engage", "tip": "E pull sets up kills. R drain tank in fights."},
+    "Zilean": {"lane": 3, "late": 5, "style": "utility/scaling", "tip": "R revive wins fights. Double bomb stun. XP passive."},
+    "Taric": {"lane": 2, "late": 5, "style": "peel/invulnerability", "tip": "R makes team invulnerable. Weak lane. Insane with divers."},
+    "Seraphine": {"lane": 3, "late": 5, "style": "poke/enchanter", "tip": "R through team. Scales with items. Huge teamfights."},
 
     # --- ADCs ---
     "Jinx": {"lane": 2, "late": 5, "style": "hypercarry", "tip": "Weak lane, resets win teamfights. Farm to 3 items."},
@@ -68,6 +79,7 @@ CHAMPION_DATA: dict[str, dict] = {
     "Nilah": {"lane": 4, "late": 4, "style": "dive/melee", "tip": "Short range but W dodges. Needs engage support."},
     "Kalista": {"lane": 4, "late": 3, "style": "kite/utility", "tip": "Hop kiting. R saves support. Falls off."},
     "Corki": {"lane": 3, "late": 4, "style": "poke/burst", "tip": "Package roams. Mixed damage. Poke with R."},
+    "Ziggs": {"lane": 3, "late": 3, "style": "poke/siege", "tip": "Tower shred with W. Safe waveclear. No DPS."},
 
     # --- Mid ---
     "Ahri": {"lane": 3, "late": 3, "style": "safe/pick", "tip": "Charm pick. Triple dash escape. Never hard carries."},
@@ -91,6 +103,20 @@ CHAMPION_DATA: dict[str, dict] = {
     "Neeko": {"lane": 3, "late": 3, "style": "burst/engage", "tip": "Disguise. R flash engage. Burst combo."},
     "Seraphine": {"lane": 3, "late": 5, "style": "poke/teamfight", "tip": "R through team. Scales with items."},
     "Annie": {"lane": 3, "late": 3, "style": "burst/engage", "tip": "Flash+R stun. Simple but effective."},
+    "Lissandra": {"lane": 3, "late": 4, "style": "engage/lockdown", "tip": "R self or enemy. W root. Counters assassins and divers."},
+    "Cassiopeia": {"lane": 3, "late": 5, "style": "sustain_dps/zone", "tip": "E spam DPS. R stun if facing. No boots needed."},
+    "Azir": {"lane": 2, "late": 5, "style": "sustain_dps/siege", "tip": "Soldier poke. R shuffle engage. Hardest champ. Needs 3 items."},
+    "Ryze": {"lane": 3, "late": 4, "style": "sustain_dps/utility", "tip": "EQ combos. R team teleport. Short range mage."},
+    "Anivia": {"lane": 3, "late": 5, "style": "zone/peel", "tip": "Wall splits teams. R zone. Egg passive. Insane waveclear."},
+    "Sylas": {"lane": 3, "late": 4, "style": "dive/burst", "tip": "Steals ults. Healing with W. Flexible AP bruiser."},
+    "Talon": {"lane": 4, "late": 2, "style": "roam/assassin", "tip": "Fastest roams with E wall hop. Must snowball sidelanes."},
+    "Naafiri": {"lane": 4, "late": 2, "style": "assassin/dive", "tip": "Pack damage. Simple assassin. Falls off late."},
+    "Pantheon": {"lane": 5, "late": 1, "style": "burst/roam", "tip": "Point-click stun. R roams. Falls off a cliff after 20min."},
+    "Ekko": {"lane": 3, "late": 4, "style": "assassin/safe", "tip": "R undo mistakes. W stun zone. Good waveclear."},
+    "Diana": {"lane": 3, "late": 4, "style": "dive/burst", "tip": "R pull + Zhonya. All-in at 6. Weak pre-6."},
+    "Xerath": {"lane": 4, "late": 3, "style": "poke/siege", "tip": "Long range artillery. Immobile. Free ganks."},
+    "Vel'Koz": {"lane": 4, "late": 3, "style": "poke/burst", "tip": "True damage combo. Geometry angles. Immobile."},
+    "Lux": {"lane": 3, "late": 3, "style": "poke/burst", "tip": "Q catch = kill. Shield utility. Immobile."},
 
     # --- Jungle ---
     "LeeSin": {"lane": 5, "late": 2, "style": "early/pick", "tip": "Strongest early. Insec. Falls off hard."},
@@ -113,6 +139,21 @@ CHAMPION_DATA: dict[str, dict] = {
     "Nocturne": {"lane": 4, "late": 3, "style": "dive/pick", "tip": "R darkness. Point-click dive. Falls off."},
     "Lillia": {"lane": 3, "late": 4, "style": "poke/kite", "tip": "Speed passive. R sleep wombo."},
     "Wukong": {"lane": 3, "late": 4, "style": "engage/wombo", "tip": "Clone mindgames. Double R knockup."},
+    "Rammus": {"lane": 3, "late": 3, "style": "engage/tank", "tip": "OK. Taunt locks carries. Armor stacking vs AD."},
+    "Maokai": {"lane": 3, "late": 4, "style": "engage/tank", "tip": "Saplings vision. R root wave. Tanky sustain."},
+    "Nunu": {"lane": 3, "late": 3, "style": "engage/objective", "tip": "Snowball ganks. Q smite secures objectives."},
+    "Shaco": {"lane": 4, "late": 2, "style": "pick/split", "tip": "Boxes and invis ganks. Clone bait. Falls off."},
+    "Belveth": {"lane": 3, "late": 5, "style": "hypercarry/split", "tip": "Infinite scaling attack speed. Void coral form."},
+    "Briar": {"lane": 4, "late": 3, "style": "dive/burst", "tip": "W frenzy all-in. R global engage. No control."},
+    "Ivern": {"lane": 2, "late": 4, "style": "enchanter/support", "tip": "Jungle enchanter. Daisy tank. Shields carries."},
+    "Rengar": {"lane": 4, "late": 3, "style": "assassin/pick", "tip": "Bush leap oneshot. R invis hunt. Snowball reliant."},
+    "Fiddlesticks": {"lane": 2, "late": 5, "style": "engage/wombo", "tip": "R from fog = teamfight win. Weak early invades."},
+    "Volibear": {"lane": 4, "late": 2, "style": "dive/tank", "tip": "R tower dive. Strong early ganks. Falls off."},
+    "Warwick": {"lane": 4, "late": 2, "style": "dive/sustain", "tip": "Blood scent chases. R suppress. Simple and strong early."},
+    "Xin Zhao": {"lane": 4, "late": 2, "style": "dive/early", "tip": "Strong duelist early. R knockback zone. Falls off."},
+    "Udyr": {"lane": 3, "late": 3, "style": "split/tank", "tip": "Fast clear. Stun ganks. Flexible build."},
+    "Skarner": {"lane": 3, "late": 3, "style": "engage/pick", "tip": "R suppresses and drags. Spires control."},
+    "Taliyah": {"lane": 3, "late": 3, "style": "burst/roam", "tip": "W+E combo burst. R wall cuts off. Good ganks."},
 
     # --- Top ---
     "Darius": {"lane": 5, "late": 2, "style": "lane bully/juggernaut", "tip": "5 stack = kill. Kite him and he's useless."},
@@ -139,6 +180,18 @@ CHAMPION_DATA: dict[str, dict] = {
     "Nasus": {"lane": 1, "late": 5, "style": "scaling/split", "tip": "Free lane = win. Stack Q. Wither cripples."},
     "Tryndamere": {"lane": 3, "late": 4, "style": "split/melee carry", "tip": "R undying 5s. Split push. Weak teamfight."},
     "Ambessa": {"lane": 4, "late": 3, "style": "dive/burst", "tip": "Dash combos. Strong skirmish. Falls off."},
+    "Rumble": {"lane": 4, "late": 4, "style": "zone/teamfight", "tip": "R equalizer wins fights. Heat management."},
+    "Teemo": {"lane": 4, "late": 2, "style": "poke/split", "tip": "Blind counters AA champs. Shrooms map control. Falls off."},
+    "Yorick": {"lane": 3, "late": 4, "style": "split/siege", "tip": "Maiden split pushes. Wall traps. Ignored = loses towers."},
+    "Illaoi": {"lane": 4, "late": 3, "style": "zone/juggernaut", "tip": "R in teamfights heals insane. Don't fight in tentacles."},
+    "Urgot": {"lane": 4, "late": 3, "style": "sustain_dps/tank", "tip": "Shotgun knees. R execute. Tanky ranged."},
+    "Cho'Gath": {"lane": 3, "late": 4, "style": "tank/scaling", "tip": "R stacks infinite HP. Silence + knockup. Immobile."},
+    "Dr.Mundo": {"lane": 3, "late": 4, "style": "tank/sustain", "tip": "Passive blocks CC. R full heal. Unkillable late."},
+    "Singed": {"lane": 2, "late": 3, "style": "proxy/split", "tip": "Proxy farms behind tower. Fling + poison. Unique playstyle."},
+    "Gragas": {"lane": 3, "late": 3, "style": "burst/engage", "tip": "E+Flash engage. R displacement. Flexible AP/tank."},
+    "Kayle": {"lane": 1, "late": 5, "style": "hypercarry/scaling", "tip": "Useless pre-6. Ranged at 6. God mode at 16."},
+    "Pantheon": {"lane": 5, "late": 1, "style": "burst/roam", "tip": "Point-click stun. R roams. Falls off hard."},
+    "Wukong": {"lane": 3, "late": 4, "style": "engage/wombo", "tip": "Clone mindgames. Double R knockup."},
 }
 
 
@@ -220,6 +273,10 @@ MATCHUPS: dict[str, dict[str, int]] = {
         "Leona": -1, "Nautilus": -1,
         "Sona": 1, "Soraka": 1,
     },
+    "Janna": {
+        "Zyra": -1, "Brand": -1,
+        "Nautilus": 2, "Leona": 2, "Alistar": 1,  # tornado/R disengage counters engage
+    },
     "Pyke": {
         "Morgana": -3, "Alistar": -2, "Leona": -1,
         "Sona": 2, "Soraka": 2, "Nami": 1,
@@ -228,10 +285,12 @@ MATCHUPS: dict[str, dict[str, int]] = {
     # --- ADCs ---
     "Jinx": {
         "Draven": -3, "Lucian": -2, "Caitlyn": -2, "Tristana": -1,
+        "Nautilus": -2, "Leona": -2,  # weak to hard engage supports
         "Ezreal": 1, "KogMaw": 1,
     },
     "KogMaw": {
         "Draven": -3, "Lucian": -2, "Samira": -2, "Tristana": -2,
+        "Nautilus": -2, "Leona": -2,  # immobile = free hook target
         "Ezreal": 1, "Jinx": 0,
     },
     "Caitlyn": {
@@ -244,6 +303,7 @@ MATCHUPS: dict[str, dict[str, int]] = {
     },
     "Ezreal": {
         "Draven": 1, "Caitlyn": -1,
+        "Nautilus": 1,  # E escape makes hooks less punishing
         "Sivir": -1,  # spellshield blocks Q
     },
     "Varus": {
@@ -256,23 +316,36 @@ MATCHUPS: dict[str, dict[str, int]] = {
     },
     "Vayne": {
         "Caitlyn": -2, "Draven": -2, "Lucian": -1,
+        "Nautilus": -2,  # short range + no escape pre-6 = free kills
         "KogMaw": 1, "Jinx": 1,
     },
     "Aphelios": {
         "Draven": -2, "Lucian": -2, "Caitlyn": -1,
+        "Nautilus": -2,  # immobile, easy hook target
         "Ezreal": 1, "Jinx": 0,
     },
     "Samira": {
         "Caitlyn": -1, "Ashe": -1,  # poke keeps her low
+        "Nautilus": 1,  # W blocks CC, thrives in all-in lanes
         "Jinx": 2, "KogMaw": 2, "Varus": 2,
     },
     "Lucian": {
         "Vayne": -1,  # outscaled
+        "Nautilus": 1,  # mobile, can dash out of hook range
         "KogMaw": 2, "Jinx": 2, "Aphelios": 2,
     },
     "Tristana": {
         "Caitlyn": -1,
+        "Nautilus": 1,  # W jump escapes, can all-in back
         "KogMaw": 2, "Jinx": 1, "Vayne": 1,
+    },
+    "Xayah": {
+        "Caitlyn": -1, "Draven": -1,
+        "Nautilus": 1,  # R untargetable dodges R, feather root punishes engage
+    },
+    "Sivir": {
+        "Draven": -1,
+        "Nautilus": 2,  # Spellshield blocks hook/R completely
     },
 
     # --- Mid ---
@@ -427,6 +500,10 @@ CHAMPION_TAGS: dict[str, list[str]] = {
     "Bard": ["pick", "utility", "roam"],
     "Poppy": ["peel", "tank"],
     "Galio": ["engage", "tank", "roam"],
+    "Swain": ["sustain_dps", "engage"],
+    "Zilean": ["utility", "peel", "safe"],
+    "Taric": ["peel", "tank", "engage"],
+    "Seraphine": ["wombo", "poke", "enchanter"],
 
     # --- Junglers ---
     "LeeSin": ["pick", "engage", "dive"],
@@ -457,6 +534,13 @@ CHAMPION_TAGS: dict[str, list[str]] = {
     "Briar": ["dive", "burst"],
     "Ivern": ["enchanter", "peel"],
     "Nunu": ["engage", "tank", "wombo"],
+    "Fiddlesticks": ["engage", "wombo", "burst"],
+    "Warwick": ["dive", "sustain_dps", "pick"],
+    "XinZhao": ["dive", "engage"],
+    "Udyr": ["split", "tank", "dive"],
+    "Skarner": ["engage", "pick", "tank"],
+    "Taliyah": ["burst", "pick", "roam"],
+    "Volibear": ["dive", "tank", "split"],
 
     # --- Mid laners ---
     "Ahri": ["pick", "burst", "safe"],
@@ -486,6 +570,11 @@ CHAMPION_TAGS: dict[str, list[str]] = {
     "Neeko": ["wombo", "engage", "burst"],
     "Seraphine": ["wombo", "poke", "enchanter"],
     "Annie": ["engage", "burst", "wombo"],
+    "Lissandra": ["engage", "peel", "burst"],
+    "Ekko": ["burst", "dive", "safe"],
+    "Pantheon": ["burst", "pick", "roam"],
+    "Xerath": ["poke", "siege"],
+    "Vel'Koz": ["poke", "siege", "burst"],
 
     # --- Top laners ---
     "Ornn": ["engage", "tank", "wombo"],
@@ -521,4 +610,7 @@ CHAMPION_TAGS: dict[str, list[str]] = {
     "Singed": ["split", "engage"],
     "Gragas": ["engage", "peel", "burst"],
     "Ambessa": ["dive", "burst", "split"],
+    "Kayle": ["hypercarry", "sustain_dps", "split"],
+    "Wukong": ["engage", "wombo", "dive"],
+    "Pantheon": ["burst", "pick", "roam"],
 }
