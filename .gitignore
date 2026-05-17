@@ -13,6 +13,8 @@ lcu-helper/dist/
 lcu-helper/build/
 lcu-helper/*.spec
 lcu-helper/profile_cache.json
+lcu-helper/test_results.txt
+lcu-helper/__pycache__/
 
 # Python
 backend/venv/

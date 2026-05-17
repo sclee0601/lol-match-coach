@@ -266,6 +266,17 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
     champion_pool = profile.get("mastery_pool", [])
     recent_picks = profile.get("best_picks", [])
 
+    # Known ADC champions (for role filtering — tags alone overlap with mid laners)
+    # Includes APC bot laners (Ziggs, Seraphine, Veigar, Hwei, Mel, Brand, Swain, etc.)
+    ADC_CHAMPIONS = {
+        "Jinx", "KogMaw", "Vayne", "Caitlyn", "Draven", "Lucian", "Ezreal",
+        "Varus", "Jhin", "Ashe", "MissFortune", "Kaisa", "Xayah", "Samira",
+        "Tristana", "Sivir", "Aphelios", "Twitch", "Zeri", "Smolder", "Nilah",
+        "Kalista", "Corki", "Ziggs", "Seraphine", "Veigar", "Hwei", "Mel",
+        "Brand", "Swain", "Karthus", "Heimerdinger", "Taliyah", "Aurora",
+        "Senna",
+    }
+
     # Build candidate list from mastery pool first
     for mastery_champ in champion_pool:
         champ = mastery_champ["champion"]
@@ -276,10 +287,11 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
         role_fits = False
         if norm_role == "UTILITY" and ("enchanter" in champ_tags or "peel" in champ_tags or "engage" in champ_tags or "tank" in champ_tags or "pick" in champ_tags):
             role_fits = True
-        elif norm_role == "BOTTOM" and ("sustain_dps" in champ_tags or "hypercarry" in champ_tags or "lane_bully" in champ_tags or "poke" in champ_tags or "safe" in champ_tags or "siege" in champ_tags):
+        elif norm_role == "BOTTOM" and champ in ADC_CHAMPIONS:
             role_fits = True
         elif norm_role == "MIDDLE" and ("burst" in champ_tags or "poke" in champ_tags or "assassin" in champ_tags or "sustain_dps" in champ_tags or "roam" in champ_tags):
-            role_fits = True
+            if champ not in ADC_CHAMPIONS:
+                role_fits = True
         elif norm_role == "JUNGLE" and ("engage" in champ_tags or "dive" in champ_tags or "tank" in champ_tags or "burst" in champ_tags or "pick" in champ_tags):
             role_fits = True
         elif norm_role == "TOP" and ("split" in champ_tags or "tank" in champ_tags or "dive" in champ_tags or "lane_bully" in champ_tags or "engage" in champ_tags):
@@ -360,6 +372,42 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
 
     # Also generate "ideal picks" regardless of user's pool
     # Check ALL champions for the role, not just user's mastery
+    # Known support champions (to exclude from solo lane ideal picks)
+    SUPPORT_CHAMPIONS = {
+        "Thresh", "Nautilus", "Leona", "Alistar", "Blitzcrank", "Pyke", "Rakan",
+        "Rell", "Milio", "Lulu", "Janna", "Soraka", "Nami", "Yuumi", "Sona",
+        "Karma", "Morgana", "Lux", "Zyra", "Brand", "Xerath", "Vel'Koz",
+        "Senna", "TahmKench", "Braum", "Renata", "Bard", "Poppy", "Galio",
+        "Taric", "Zilean", "Seraphine", "Yunara",
+    }
+
+    # Known junglers (for JUNGLE ideal picks)
+    JUNGLE_CHAMPIONS = {
+        "LeeSin", "Elise", "Nidalee", "KhaZix", "Evelynn", "Viego", "Graves",
+        "Kindred", "Diana", "JarvanIV", "Vi", "Hecarim", "Amumu", "Sejuani",
+        "Zac", "MasterYi", "Kayn", "Nocturne", "Lillia", "Wukong", "Briar",
+        "Ivern", "Nunu", "Shaco", "Rammus", "Maokai", "Belveth", "Rengar",
+        "Skarner", "Volibear", "Warwick",
+    }
+
+    # Known top laners (to exclude from MID ideal picks)
+    TOP_CHAMPIONS = {
+        "Darius", "Garen", "Mordekaiser", "Fiora", "Camille", "Jax", "Irelia",
+        "Riven", "Aatrox", "Ornn", "Malphite", "Sion", "Kennen", "Gnar",
+        "Gangplank", "Renekton", "Jayce", "Shen", "Quinn", "KSante", "Volibear",
+        "Nasus", "Tryndamere", "Ambessa", "Yorick", "Illaoi", "Kled",
+        "Dr.Mundo", "Singed", "Urgot", "Cho'Gath", "Rumble",
+    }
+
+    # Mid-only champions (to exclude from TOP ideal picks)
+    MID_CHAMPIONS = {
+        "Ahri", "Syndra", "Orianna", "Viktor", "Zed", "Fizz", "LeBlanc",
+        "Katarina", "Akali", "Zoe", "AurelionSol", "Malzahar", "Veigar",
+        "TwistedFate", "Hwei", "Neeko", "Seraphine", "Annie", "Lissandra",
+        "Cassiopeia", "Azir", "Anivia", "Ryze", "Pantheon", "Naafiri",
+        "Talon", "Ekko",
+    }
+
     ideal_candidates = []
     for champ, tags in CHAMPION_TAGS.items():
         if champ.lower() in banned_lower | ally_lower | enemy_lower:
@@ -368,14 +416,16 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
         role_fits = False
         if norm_role == "UTILITY" and ("enchanter" in tags or "peel" in tags or "engage" in tags or "tank" in tags or "pick" in tags):
             role_fits = True
-        elif norm_role == "BOTTOM" and ("sustain_dps" in tags or "hypercarry" in tags or "lane_bully" in tags or "safe" in tags or "siege" in tags):
+        elif norm_role == "BOTTOM" and champ in ADC_CHAMPIONS:
             role_fits = True
         elif norm_role == "MIDDLE" and ("burst" in tags or "poke" in tags or "sustain_dps" in tags or "roam" in tags):
-            role_fits = True
-        elif norm_role == "JUNGLE" and ("engage" in tags or "dive" in tags or "tank" in tags or "burst" in tags or "pick" in tags):
+            if champ not in ADC_CHAMPIONS and champ not in SUPPORT_CHAMPIONS and champ not in TOP_CHAMPIONS and champ not in JUNGLE_CHAMPIONS:
+                role_fits = True
+        elif norm_role == "JUNGLE" and champ in JUNGLE_CHAMPIONS:
             role_fits = True
         elif norm_role == "TOP" and ("split" in tags or "tank" in tags or "dive" in tags or "lane_bully" in tags or "engage" in tags):
-            role_fits = True
+            if champ not in SUPPORT_CHAMPIONS and champ not in ADC_CHAMPIONS and champ not in JUNGLE_CHAMPIONS and champ not in MID_CHAMPIONS:
+                role_fits = True
         elif not norm_role:
             role_fits = True
         if not role_fits:
@@ -401,14 +451,44 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
         if enemy_has_scaling and ("engage" in tags or "all_in" in tags or "lane_bully" in tags):
             comp_bonus += 3
 
+        # For solo lanes, factor in lane strength as a counter-pick signal
+        lane_bonus = 0
+        if norm_role in ("TOP", "MIDDLE"):
+            champ_data = CHAMPION_DATA.get(champ, {})
+            lane_power = champ_data.get("lane", 3)
+            late_power = champ_data.get("late", 3)
+            lane_bonus = (lane_power - 3) * 2  # +4 for dominant laners, 0 for average
+            if not enemy_has_scaling:
+                lane_bonus += (late_power - 3)  # reward scaling vs early-game enemies
+
         ideal_candidates.append({
             "champion": champ,
             "comp_bonus": comp_bonus,
+            "lane_bonus": lane_bonus,
             "matchup_score": matchup["matchup_score"],
             "matchup_details": matchup["details"],
         })
 
-    ideal_candidates.sort(key=lambda x: (-(x["comp_bonus"] * 20), -(x["matchup_score"] * 15)))
+    # Sort differently based on role:
+    # Solo lanes (TOP/MID): matchup counters > lane strength > comp fit
+    # Bot lane (ADC/SUPPORT): matchup > comp (since we have bot-specific matchup data)
+    # Jungle: comp fit > matchup
+    if norm_role in ("TOP", "MIDDLE"):
+        ideal_candidates.sort(key=lambda x: (
+            -(x["matchup_score"] * 25),
+            -(x["lane_bonus"] * 15),
+            -(x["comp_bonus"] * 10),
+        ))
+    elif norm_role == "JUNGLE":
+        ideal_candidates.sort(key=lambda x: (
+            -(x["comp_bonus"] * 15),
+            -(x["matchup_score"] * 20),
+        ))
+    else:  # BOTTOM, UTILITY
+        ideal_candidates.sort(key=lambda x: (
+            -(x["matchup_score"] * 25),
+            -(x["comp_bonus"] * 15),
+        ))
     # Filter out champions already in pick_suggestions
     pick_champs = {p["champion"] for p in pick_suggestions}
     ideal_picks = [c for c in ideal_candidates if c["champion"] not in pick_champs][:3]
@@ -465,7 +545,36 @@ def parse_session(session: dict) -> dict:
             if name not in enemy_picks:
                 enemy_picks.append(name)
 
-    return {"my_role": my_role, "my_champ": champ_name(my_champ) if my_champ > 0 else "", "ally_picks": ally_picks, "enemy_picks": enemy_picks, "bans": bans}
+    # Track which ally roles still need to pick (excluding local player if already picked)
+    unpicked_roles = []
+    for p in session.get("myTeam", []):
+        cell = p.get("cellId", -1)
+        role = p.get("assignedPosition", "")
+        has_pick = (p.get("championId", 0) > 0)
+        if not has_pick and role:
+            unpicked_roles.append(role)
+
+    # Detect who is currently picking (from actions in progress)
+    current_picking_role = ""
+    for action_group in session.get("actions", []):
+        for action in action_group:
+            if action.get("type") == "pick" and action.get("isInProgress") and not action.get("completed"):
+                actor_cell = action.get("actorCellId", -1)
+                # Find this actor's role in myTeam
+                for p in session.get("myTeam", []):
+                    if p.get("cellId") == actor_cell:
+                        current_picking_role = p.get("assignedPosition", "")
+                        break
+
+    return {
+        "my_role": my_role,
+        "my_champ": champ_name(my_champ) if my_champ > 0 else "",
+        "ally_picks": ally_picks,
+        "enemy_picks": enemy_picks,
+        "bans": bans,
+        "unpicked_roles": unpicked_roles,
+        "current_picking_role": current_picking_role,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -476,9 +585,9 @@ class MatchCoachApp:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("LoL Match Coach — Draft Helper")
-        self.root.geometry("520x600")
+        self.root.geometry("520x700")
         self.root.configure(bg="#0d1117")
-        self.root.resizable(False, False)
+        self.root.resizable(False, True)
 
         self.profile = None
         self.summoner = ""
@@ -574,9 +683,16 @@ class MatchCoachApp:
                                     font=("Segoe UI", 10), fg="#9ca3af", bg="#0d1117")
         self.phase_label.pack(pady=(0, 10))
 
-        # Content area
-        self.content_frame = tk.Frame(self.root, bg="#0d1117")
-        self.content_frame.pack(fill="both", expand=True, padx=20)
+        # Scrollable content area
+        self._scroll_canvas = tk.Canvas(self.root, bg="#0d1117", highlightthickness=0)
+        self._scroll_canvas.pack(fill="both", expand=True, padx=20)
+        self.content_frame = tk.Frame(self._scroll_canvas, bg="#0d1117")
+        self._scroll_window = self._scroll_canvas.create_window((0, 0), window=self.content_frame, anchor="nw")
+
+        # Bind scroll and resize
+        self.content_frame.bind("<Configure>", lambda e: self._scroll_canvas.configure(scrollregion=self._scroll_canvas.bbox("all")))
+        self._scroll_canvas.bind("<Configure>", lambda e: self._scroll_canvas.itemconfig(self._scroll_window, width=e.width))
+        self._scroll_canvas.bind_all("<MouseWheel>", lambda e: self._scroll_canvas.yview_scroll(-1 * (e.delta // 120), "units"))
 
         # Start polling
         self._poll()
@@ -660,6 +776,22 @@ class MatchCoachApp:
 
         try:
             recs = get_recommendations(self.profile, draft["my_role"], draft["ally_picks"], draft["enemy_picks"], draft["bans"])
+            # Generate ideal picks per unfilled role (for teammates)
+            unpicked = draft.get("unpicked_roles", [])
+            # If we haven't picked yet, show ideal for our role (normal behavior)
+            # If we already picked, show ideal for each remaining role
+            if draft["my_champ"] and unpicked:
+                team_ideals = []
+                for role in unpicked:
+                    role_recs = get_recommendations(self.profile, role, draft["ally_picks"], draft["enemy_picks"], draft["bans"])
+                    if role_recs.get("ideal_picks"):
+                        best = role_recs["ideal_picks"][0]
+                        best["role"] = role
+                        team_ideals.append(best)
+                recs["team_ideals"] = team_ideals
+                recs["ideal_picks"] = []  # clear single-role ideal
+            else:
+                recs["team_ideals"] = []
         except Exception as e:
             tk.Frame(f, height=1, bg="#1f2937").pack(fill="x", pady=12)
             tk.Label(f, text=f"⚠ Error loading recommendations", font=("Segoe UI", 10),
@@ -723,6 +855,7 @@ class MatchCoachApp:
 
         # Ideal picks (best for situation, regardless of user's pool)
         if recs.get("ideal_picks"):
+            role_display = {"top": "TOP", "jungle": "JG", "middle": "MID", "bottom": "ADC", "utility": "SUP"}
             tk.Label(f, text="💡 IDEAL FOR THIS SITUATION", font=("Segoe UI", 10, "bold"),
                      fg="#f0c040", bg="#0d1117").pack(anchor="w")
             for p in recs["ideal_picks"]:
@@ -742,6 +875,32 @@ class MatchCoachApp:
                         color = "#86efac" if "유리" in detail else "#fca5a5"
                         tk.Label(info_frame, text=detail, font=("Segoe UI", 8),
                                  fg=color, bg="#0d1117").pack(anchor="w")
+            tk.Label(f, text="", bg="#0d1117").pack()
+
+        # Team ideals (when you already picked — show best pick per remaining role)
+        if recs.get("team_ideals"):
+            role_display = {"top": "TOP", "jungle": "JG", "middle": "MID", "bottom": "ADC", "utility": "SUP"}
+            tk.Label(f, text="💡 TEAM NEEDS", font=("Segoe UI", 10, "bold"),
+                     fg="#f0c040", bg="#0d1117").pack(anchor="w")
+            for t in recs["team_ideals"]:
+                role_label = role_display.get(t.get("role", "").lower(), t.get("role", "").upper())
+                pick_frame = tk.Frame(f, bg="#0d1117")
+                pick_frame.pack(anchor="w", fill="x", pady=2)
+                self._load_champ_image(pick_frame, t["champion"])
+                info_frame = tk.Frame(pick_frame, bg="#0d1117")
+                info_frame.pack(side="left", padx=(8, 0))
+                tk.Label(info_frame, text=f"[{role_label}] {t['champion']}",
+                         font=("Segoe UI", 10, "bold"), fg="#fde68a", bg="#0d1117").pack(anchor="w")
+                if t.get("matchup_details"):
+                    for detail in t["matchup_details"]:
+                        color = "#86efac" if "유리" in detail else "#fca5a5"
+                        tk.Label(info_frame, text=detail, font=("Segoe UI", 8),
+                                 fg=color, bg="#0d1117").pack(anchor="w")
+                else:
+                    ctx = get_matchup_context(t["champion"])
+                    if ctx.get("tip"):
+                        tk.Label(info_frame, text=ctx["tip"], font=("Segoe UI", 8),
+                                 fg="#9ca3af", bg="#0d1117").pack(anchor="w")
             tk.Label(f, text="", bg="#0d1117").pack()
 
         # Synergy

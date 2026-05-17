@@ -103,7 +103,16 @@ CHAMPION_DATA: dict[str, dict] = {
     "Neeko": {"lane": 3, "late": 3, "style": "burst/engage", "tip": "Disguise. R flash engage. Burst combo."},
     "Seraphine": {"lane": 3, "late": 5, "style": "poke/teamfight", "tip": "R through team. Scales with items."},
     "Annie": {"lane": 3, "late": 3, "style": "burst/engage", "tip": "Flash+R stun. Simple but effective."},
+    "Mel": {"lane": 3, "late": 5, "style": "poke/scaling", "tip": "Long range poke, shield utility. Scales hard as APC bot."},
     "Lissandra": {"lane": 3, "late": 4, "style": "engage/lockdown", "tip": "R self or enemy. W root. Counters assassins and divers."},
+    "Aurora": {"lane": 3, "late": 4, "style": "burst/kite", "tip": "R zone traps enemies. High mobility. Burst mage."},
+    "Swain": {"lane": 3, "late": 4, "style": "sustain/engage", "tip": "E pull into W. R drain tank. Strong bot lane APC."},
+    "Brand": {"lane": 4, "late": 4, "style": "poke/burst", "tip": "Passive burn melts teams. R bounces in teamfights."},
+    "Karthus": {"lane": 2, "late": 5, "style": "scaling/global", "tip": "R global damage. Passive lets you cast after death. Farm to scale."},
+    "Heimerdinger": {"lane": 4, "late": 3, "style": "zone/push", "tip": "Turrets zone lane. Hard to gank. Falls off in teamfights."},
+    "Taliyah": {"lane": 3, "late": 4, "style": "burst/zone", "tip": "W+E combo burst. R wall splits teams. Good roams."},
+    "Zaahen": {"lane": 3, "late": 3, "style": "dive/bruiser", "tip": "Newest champion. Dive-oriented bruiser."},
+    "Yunara": {"lane": 3, "late": 4, "style": "enchanter/mage", "tip": "Enchanter with damage. Flexible bot lane pick."},
     "Cassiopeia": {"lane": 3, "late": 5, "style": "sustain_dps/zone", "tip": "E spam DPS. R stun if facing. No boots needed."},
     "Azir": {"lane": 2, "late": 5, "style": "sustain_dps/siege", "tip": "Soldier poke. R shuffle engage. Hardest champ. Needs 3 items."},
     "Ryze": {"lane": 3, "late": 4, "style": "sustain_dps/utility", "tip": "EQ combos. R team teleport. Short range mage."},
@@ -276,76 +285,153 @@ MATCHUPS: dict[str, dict[str, int]] = {
     "Janna": {
         "Zyra": -1, "Brand": -1,
         "Nautilus": 2, "Leona": 2, "Alistar": 1,  # tornado/R disengage counters engage
+        "Caitlyn": 1,  # shield + disengage keeps ADC safe vs poke
     },
     "Pyke": {
         "Morgana": -3, "Alistar": -2, "Leona": -1,
         "Sona": 2, "Soraka": 2, "Nami": 1,
+    },
+    # --- Support vs Support (bot lane matchups) ---
+    "Alistar": {
+        "Morgana": -2, "Janna": -1,  # black shield/disengage stops combo
+        "Caitlyn": -2, "Lux": -1,  # poked out before can engage
+        "Sona": 2, "Soraka": 2, "Nami": 1,
+        "Jinx": 1, "KogMaw": 1,  # immobile ADCs easy to combo
+    },
+    "Lulu": {
+        "Zyra": -2, "Brand": -2, "Vel'Koz": -2,  # outpoked
+        "Leona": 1, "Nautilus": 1, "Alistar": 1,  # polymorph stops engage
+        "Draven": -1,  # can't match his lane pressure
+    },
+    "Soraka": {
+        "Nautilus": -2, "Leona": -2, "Blitzcrank": -2,  # all-in kills her
+        "Caitlyn": -1,  # poke through her heal
+        "Lux": 1,  # sustains through poke
+        "Jhin": 1,  # heals through his poke
+    },
+    "Braum": {
+        "Zyra": -2, "Brand": -2, "Vel'Koz": -1,  # poke behind shield
+        "Morgana": -1,  # black shield blocks passive
+        "Draven": 1, "Lucian": 1,  # passive procs with fast-attacking ADCs
+        "Jinx": -1,  # can't reach her in lane
+    },
+    "Lux": {
+        "Nautilus": -2, "Leona": -2, "Blitzcrank": -2,  # hook/engage = dead
+        "Thresh": -1,
+        "Sona": 2, "Soraka": 1, "Janna": 1,  # outpokes enchanters
+        "Jinx": 1, "KogMaw": 1,  # easy to hit immobile ADCs
+    },
+    "Xerath": {
+        "Nautilus": -2, "Leona": -2, "Blitzcrank": -2,
+        "Thresh": -1,
+        "Sona": 2, "Soraka": 1,
+        "Caitlyn": 1,  # outranges even Cait with poke
+    },
+    "Vel'Koz": {
+        "Nautilus": -2, "Leona": -2, "Blitzcrank": -2,
+        "Lulu": 2, "Janna": 1, "Soraka": 1,
+    },
+    "Blitzcrank": {
+        "Morgana": -3, "Sivir": -2,  # black shield/spellshield blocks hook
+        "Ezreal": -1,  # E dodges hook
+        "Sona": 3, "Soraka": 2, "Lux": 2, "Xerath": 2,  # squishy = dead on hook
+        "Jinx": 2, "KogMaw": 2, "Aphelios": 1,
+    },
+
+    # --- ADC vs Support interactions ---
+    "Caitlyn": {
+        "Vayne": -1, "Samira": -1,
+        "Nautilus": 1, "Leona": 1,  # outranges engage, traps when they go in
+        "Sona": 2, "Soraka": 1,  # pokes enchanters out
+        "KogMaw": 2, "Jinx": 2, "Twitch": 2, "Aphelios": 1,
+    },
+    "Draven": {
+        "Caitlyn": -1, "Ezreal": -1,
+        "Janna": -1, "Lulu": -1,  # peel/polymorph shuts down his aggression
+        "Nautilus": 1, "Leona": 1,  # loves engage supports on his team AND enemy (all-in)
+        "Jinx": 3, "KogMaw": 3, "Vayne": 2, "Twitch": 2,
+    },
+    "Ezreal": {
+        "Draven": 1, "Caitlyn": -1,
+        "Nautilus": 1, "Leona": 1, "Blitzcrank": 1,  # E escape makes hooks less punishing
+        "Sivir": -1,
+    },
+    "Sivir": {
+        "Draven": -1,
+        "Nautilus": 2, "Leona": 1, "Blitzcrank": 2, "Thresh": 1,  # spellshield blocks everything
+        "Lux": 1,  # spellshield blocks Q
     },
 
     # --- ADCs ---
     "Jinx": {
         "Draven": -3, "Lucian": -2, "Caitlyn": -2, "Tristana": -1,
         "Nautilus": -2, "Leona": -2,  # weak to hard engage supports
+        "Lux": -1,  # easy to hit with Q
         "Ezreal": 1, "KogMaw": 1,
     },
     "KogMaw": {
         "Draven": -3, "Lucian": -2, "Samira": -2, "Tristana": -2,
-        "Nautilus": -2, "Leona": -2,  # immobile = free hook target
+        "Nautilus": -2, "Leona": -2, "Blitzcrank": -2,  # immobile = free target
         "Ezreal": 1, "Jinx": 0,
-    },
-    "Caitlyn": {
-        "Vayne": -1, "Samira": -1,
-        "KogMaw": 2, "Jinx": 2, "Twitch": 2, "Aphelios": 1,
-    },
-    "Draven": {
-        "Caitlyn": -1, "Ezreal": -1,  # can't catch Ezreal
-        "Jinx": 3, "KogMaw": 3, "Vayne": 2, "Twitch": 2,
-    },
-    "Ezreal": {
-        "Draven": 1, "Caitlyn": -1,
-        "Nautilus": 1,  # E escape makes hooks less punishing
-        "Sivir": -1,  # spellshield blocks Q
     },
     "Varus": {
         "Samira": -2, "Lucian": -1,
+        "Nautilus": -1, "Leona": -1,  # immobile, vulnerable to engage
         "KogMaw": 1, "Jinx": 1,
     },
     "Kaisa": {
         "Caitlyn": -2, "Draven": -1,
+        "Nautilus": 0,  # can E away but short range
         "Ezreal": 1, "Jinx": 1,
     },
     "Vayne": {
         "Caitlyn": -2, "Draven": -2, "Lucian": -1,
-        "Nautilus": -2,  # short range + no escape pre-6 = free kills
+        "Nautilus": -2, "Leona": -2,  # short range + no escape pre-6 = free kills
+        "Lux": -1,  # easy to poke/root
         "KogMaw": 1, "Jinx": 1,
     },
     "Aphelios": {
         "Draven": -2, "Lucian": -2, "Caitlyn": -1,
-        "Nautilus": -2,  # immobile, easy hook target
+        "Nautilus": -2, "Leona": -2, "Blitzcrank": -2,  # immobile, easy target
         "Ezreal": 1, "Jinx": 0,
     },
     "Samira": {
-        "Caitlyn": -1, "Ashe": -1,  # poke keeps her low
-        "Nautilus": 1,  # W blocks CC, thrives in all-in lanes
+        "Caitlyn": -1, "Ashe": -1,
+        "Nautilus": 1, "Leona": 1,  # W blocks CC, thrives in all-in
+        "Lux": 1,  # W blocks Q, can dash in
         "Jinx": 2, "KogMaw": 2, "Varus": 2,
     },
     "Lucian": {
-        "Vayne": -1,  # outscaled
-        "Nautilus": 1,  # mobile, can dash out of hook range
+        "Vayne": -1,
+        "Nautilus": 1, "Leona": 0,  # mobile, can dash out
+        "Lux": 1,  # dashes dodge skillshots
         "KogMaw": 2, "Jinx": 2, "Aphelios": 2,
     },
     "Tristana": {
         "Caitlyn": -1,
-        "Nautilus": 1,  # W jump escapes, can all-in back
+        "Nautilus": 1, "Leona": 0,  # W jump escapes, can all-in back
         "KogMaw": 2, "Jinx": 1, "Vayne": 1,
     },
     "Xayah": {
         "Caitlyn": -1, "Draven": -1,
-        "Nautilus": 1,  # R untargetable dodges R, feather root punishes engage
+        "Nautilus": 1, "Leona": 1,  # R dodges engage, feather root punishes
+        "Lux": 1,  # R dodges Q
     },
-    "Sivir": {
-        "Draven": -1,
-        "Nautilus": 2,  # Spellshield blocks hook/R completely
+    "Ashe": {
+        "Draven": -2, "Lucian": -1, "Samira": -1,
+        "Nautilus": -1, "Leona": -1,  # immobile, easy engage target
+        "Jinx": 1, "KogMaw": 1,
+    },
+    "MissFortune": {
+        "Draven": -1, "Lucian": -1,
+        "Nautilus": -1, "Leona": -1,  # immobile during R
+        "Caitlyn": 1,  # Q poke trades well
+        "Jinx": 1, "KogMaw": 1,
+    },
+    "Smolder": {
+        "Draven": -2, "Lucian": -2, "Caitlyn": -1,
+        "Nautilus": -1, "Leona": -1,  # weak early, punished by engage
+        "Ezreal": 1,
     },
 
     # --- Mid ---
@@ -570,7 +656,15 @@ CHAMPION_TAGS: dict[str, list[str]] = {
     "Neeko": ["wombo", "engage", "burst"],
     "Seraphine": ["wombo", "poke", "enchanter"],
     "Annie": ["engage", "burst", "wombo"],
+    "Mel": ["poke", "utility", "siege"],
     "Lissandra": ["engage", "peel", "burst"],
+    "Aurora": ["burst", "dive", "poke"],
+    "Swain": ["sustain_dps", "engage", "poke"],
+    "Karthus": ["poke", "sustain_dps", "wombo"],
+    "Heimerdinger": ["poke", "siege", "zone"],
+    "Taliyah": ["burst", "poke", "pick"],
+    "Zaahen": ["dive", "burst", "split"],
+    "Yunara": ["enchanter", "poke", "utility"],
     "Ekko": ["burst", "dive", "safe"],
     "Pantheon": ["burst", "pick", "roam"],
     "Xerath": ["poke", "siege"],
