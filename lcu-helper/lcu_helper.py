@@ -295,7 +295,7 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
         winrate = recent["winrate"] if recent else 50  # Default 50% if no recent data
 
         comp_bonus = 0
-        pick_tags = CHAMPION_TAGS.get(pick["champion"], [])
+        pick_tags = CHAMPION_TAGS.get(champ, [])
 
         # Complete our team comp
         if not team_has_engage and ("engage" in pick_tags or "tank" in pick_tags):
@@ -357,7 +357,6 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
     # Also generate "ideal picks" regardless of user's pool
     # Check ALL champions for the role, not just user's mastery
     ideal_candidates = []
-    all_role_champs = []
     for champ, tags in CHAMPION_TAGS.items():
         if champ.lower() in banned_lower | ally_lower | enemy_lower:
             continue
@@ -545,7 +544,6 @@ class MatchCoachApp:
             else:
                 self.root.after(0, lambda: self.status_label.config(
                     text="⚠ Could not load profile. Check internet connection.", fg="#ef4444"))
-                self.root.after(0, lambda: self.connect_btn.config(state="normal"))
 
     def _refresh_profile(self):
         """Silently refresh profile in background."""
@@ -654,7 +652,15 @@ class MatchCoachApp:
                      fg="#6b7280", bg="#0d1117").pack()
             return
 
-        recs = get_recommendations(self.profile, draft["my_role"], draft["ally_picks"], draft["enemy_picks"], draft["bans"])
+        try:
+            recs = get_recommendations(self.profile, draft["my_role"], draft["ally_picks"], draft["enemy_picks"], draft["bans"])
+        except Exception as e:
+            tk.Frame(f, height=1, bg="#1f2937").pack(fill="x", pady=12)
+            tk.Label(f, text=f"⚠ Error loading recommendations", font=("Segoe UI", 10),
+                     fg="#ef4444", bg="#0d1117").pack()
+            tk.Label(f, text=str(e)[:80], font=("Segoe UI", 8),
+                     fg="#6b7280", bg="#0d1117").pack()
+            return
 
         # Separator
         tk.Frame(f, height=1, bg="#1f2937").pack(fill="x", pady=12)
