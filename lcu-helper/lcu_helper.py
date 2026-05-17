@@ -4,13 +4,11 @@ A standalone desktop app that connects to your League client during champ select
 and shows ban/pick recommendations based on your match history.
 """
 
-import asyncio
 import base64
 import os
 import json
 import threading
 import tkinter as tk
-from tkinter import ttk
 import httpx
 import urllib3
 from matchup_data import get_matchup_context, evaluate_pick_vs_enemies
@@ -21,12 +19,23 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # Config
 # ---------------------------------------------------------------------------
 
-LEAGUE_PATH = r"C:\Riot Games\League of Legends"
-LOCKFILE_PATH = os.path.join(LEAGUE_PATH, "lockfile")
+_lockfile_cache: str | None = None
+_lockfile_cache_time: float = 0
 
 
 def find_lockfile() -> str | None:
-    """Auto-find the League lockfile by checking common paths and running processes."""
+    """Auto-find the League lockfile. Caches result for 10 seconds to avoid subprocess spam."""
+    global _lockfile_cache, _lockfile_cache_time
+    import time
+
+    # Return cached result if checked within last 10 seconds
+    now = time.time()
+    if _lockfile_cache and (now - _lockfile_cache_time) < 10:
+        if os.path.exists(_lockfile_cache):
+            return _lockfile_cache
+        else:
+            _lockfile_cache = None
+
     # Check common installation paths
     common_paths = [
         r"C:\Riot Games\League of Legends\lockfile",
@@ -39,22 +48,29 @@ def find_lockfile() -> str | None:
 
     for path in common_paths:
         if os.path.exists(path):
+            _lockfile_cache = path
+            _lockfile_cache_time = now
             return path
 
-    # Try to find via running process command line
+    # Only try subprocess every 10 seconds (expensive)
+    if (now - _lockfile_cache_time) < 10:
+        return None
+    _lockfile_cache_time = now
+
     try:
         import subprocess
         result = subprocess.run(
             ["wmic", "process", "where", "name='LeagueClientUx.exe'", "get", "ExecutablePath"],
-            capture_output=True, text=True, timeout=5
+            capture_output=True, text=True, timeout=5,
+            creationflags=0x08000000  # CREATE_NO_WINDOW — prevents console flash
         )
         for line in result.stdout.strip().split("\n"):
             line = line.strip()
             if line and "LeagueClientUx" in line:
-                # Path is like ...\League of Legends\LeagueClientUx.exe
                 league_dir = os.path.dirname(line)
                 lockfile = os.path.join(league_dir, "lockfile")
                 if os.path.exists(lockfile):
+                    _lockfile_cache = lockfile
                     return lockfile
     except Exception:
         pass
@@ -106,6 +122,30 @@ def get_champ_select_session(port: int, auth: str) -> dict | None:
             return resp.json() if resp.status_code == 200 else None
     except Exception:
         return None
+
+
+def get_current_queue_id(port: int, auth: str) -> int | None:
+    """Get the current queue ID to determine game mode."""
+    try:
+        with httpx.Client(verify=False, timeout=3) as client:
+            resp = client.get(f"https://127.0.0.1:{port}/lol-gameflow/v1/session",
+                              headers={"Authorization": auth})
+            if resp.status_code == 200:
+                data = resp.json()
+                return data.get("gameData", {}).get("queue", {}).get("id", None)
+            return None
+    except Exception:
+        return None
+
+
+# Summoner's Rift queue IDs (ranked, draft, clash)
+SUPPORTED_QUEUES = {
+    420,   # Ranked Solo/Duo
+    440,   # Ranked Flex
+    400,   # Normal Draft
+    700,   # Clash
+    410,   # Ranked Solo (old)
+}
 
 
 # ---------------------------------------------------------------------------
@@ -190,52 +230,188 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
     role_map = {"top": "TOP", "jungle": "JUNGLE", "middle": "MIDDLE", "bottom": "BOTTOM", "utility": "UTILITY"}
     norm_role = role_map.get(my_role.lower(), my_role.upper())
 
-    # Gather candidate picks
+    # Gather candidate picks — use comp classifier + counter enemy comp
     candidates = []
-    for pick in profile.get("best_picks", []):
-        if pick["champion"].lower() in banned_lower | ally_lower | enemy_lower:
-            continue
-        if pick.get("role") == norm_role or not norm_role:
-            # Evaluate matchup against enemy picks
-            matchup = evaluate_pick_vs_enemies(pick["champion"], enemy_picks)
-            candidates.append({
-                **pick,
-                "matchup_score": matchup["matchup_score"],
-                "matchup_details": matchup["details"],
-            })
 
-    # If not enough role-specific picks, add others
-    if len(candidates) < 5:
-        for pick in profile.get("best_picks", []):
+    # Classify ally comp using CHAMPION_TAGS
+    from matchup_data import CHAMPION_DATA, CHAMPION_TAGS
+
+    ally_tags = []
+    for ally in ally_picks:
+        ally_tags.extend(CHAMPION_TAGS.get(ally, []))
+
+    enemy_tags = []
+    for enemy in enemy_picks:
+        enemy_tags.extend(CHAMPION_TAGS.get(enemy, []))
+
+    # What comp is our team building?
+    team_has_engage = "engage" in ally_tags or "tank" in ally_tags
+    team_has_peel = "peel" in ally_tags or "enchanter" in ally_tags
+    team_has_hypercarry = "hypercarry" in ally_tags
+    team_has_poke = ally_tags.count("poke") >= 2
+    team_has_dive = ally_tags.count("dive") >= 2
+
+    # What is enemy comp threatening?
+    enemy_has_dive = enemy_tags.count("dive") >= 2 or enemy_tags.count("burst") >= 2
+    enemy_has_poke = enemy_tags.count("poke") >= 2
+    enemy_has_engage = enemy_tags.count("engage") >= 2
+    enemy_has_split = "split" in enemy_tags
+    enemy_has_hypercarry = "hypercarry" in enemy_tags
+    enemy_has_scaling = enemy_has_hypercarry or enemy_tags.count("sustain_dps") >= 2
+
+    # Get role-appropriate champions from profile
+    # Use mastery pool (actual mains) as primary, fall back to recent picks
+    champion_pool = profile.get("mastery_pool", [])
+    recent_picks = profile.get("best_picks", [])
+
+    # Build candidate list from mastery pool first
+    for mastery_champ in champion_pool:
+        champ = mastery_champ["champion"]
+        if champ.lower() in banned_lower | ally_lower | enemy_lower:
+            continue
+        # Check if this champion fits the assigned role (from CHAMPION_TAGS)
+        champ_tags = CHAMPION_TAGS.get(champ, [])
+        role_fits = False
+        if norm_role == "UTILITY" and ("enchanter" in champ_tags or "peel" in champ_tags or "engage" in champ_tags or "tank" in champ_tags or "pick" in champ_tags):
+            role_fits = True
+        elif norm_role == "BOTTOM" and ("sustain_dps" in champ_tags or "hypercarry" in champ_tags or "burst" in champ_tags or "poke" in champ_tags or "safe" in champ_tags):
+            role_fits = True
+        elif norm_role == "MIDDLE" and ("burst" in champ_tags or "poke" in champ_tags or "assassin" in champ_tags or "sustain_dps" in champ_tags or "roam" in champ_tags):
+            role_fits = True
+        elif norm_role == "JUNGLE" and ("engage" in champ_tags or "dive" in champ_tags or "tank" in champ_tags or "burst" in champ_tags or "pick" in champ_tags):
+            role_fits = True
+        elif norm_role == "TOP" and ("split" in champ_tags or "tank" in champ_tags or "dive" in champ_tags or "lane_bully" in champ_tags or "engage" in champ_tags):
+            role_fits = True
+        elif not norm_role:
+            role_fits = True
+
+        if not role_fits:
+            continue
+
+        matchup = evaluate_pick_vs_enemies(champ, enemy_picks)
+
+        # Get winrate from recent picks if available
+        recent = next((p for p in recent_picks if p["champion"] == champ), None)
+        winrate = recent["winrate"] if recent else 50  # Default 50% if no recent data
+
+        comp_bonus = 0
+        pick_tags = CHAMPION_TAGS.get(pick["champion"], [])
+
+        # Complete our team comp
+        if not team_has_engage and ("engage" in pick_tags or "tank" in pick_tags):
+            comp_bonus += 3
+        if not team_has_peel and ("peel" in pick_tags or "enchanter" in pick_tags):
+            comp_bonus += 2
+        if team_has_hypercarry and ("peel" in pick_tags or "hypercarry_enabler" in pick_tags):
+            comp_bonus += 3  # Protect the carry
+        if team_has_poke and "poke" in pick_tags:
+            comp_bonus += 1
+        if team_has_dive and "dive" in pick_tags:
+            comp_bonus += 1
+
+        # Counter enemy comp
+        if enemy_has_dive and ("peel" in pick_tags or "enchanter" in pick_tags):
+            comp_bonus += 3  # Peel counters dive
+        if enemy_has_poke and ("engage" in pick_tags or "dive" in pick_tags):
+            comp_bonus += 2  # Engage counters poke
+        if enemy_has_engage and ("peel" in pick_tags or "safe" in pick_tags):
+            comp_bonus += 2  # Disengage counters engage
+        if enemy_has_split and ("engage" in pick_tags or "wombo" in pick_tags):
+            comp_bonus += 1  # Force 5v5 vs split
+        if enemy_has_scaling and ("engage" in pick_tags or "all_in" in pick_tags or "lane_bully" in pick_tags):
+            comp_bonus += 3  # Punish scaling comps with early aggression
+
+        candidates.append({
+            "champion": champ,
+            "winrate": winrate,
+            "games": mastery_champ.get("mastery_level", 0),
+            "matchup_score": matchup["matchup_score"],
+            "matchup_details": matchup["details"],
+            "comp_bonus": comp_bonus,
+        })
+
+    # Fallback if no role-specific picks from mastery
+    if len(candidates) == 0:
+        for pick in recent_picks:
             if pick["champion"].lower() in banned_lower | ally_lower | enemy_lower:
                 continue
-            if not any(c["champion"] == pick["champion"] for c in candidates):
-                matchup = evaluate_pick_vs_enemies(pick["champion"], enemy_picks)
-                candidates.append({
-                    **pick,
-                    "matchup_score": matchup["matchup_score"],
-                    "matchup_details": matchup["details"],
-                })
+            matchup = evaluate_pick_vs_enemies(pick["champion"], enemy_picks)
+            candidates.append({
+                "champion": pick["champion"],
+                "winrate": pick["winrate"],
+                "games": pick.get("games", 0),
+                "matchup_score": matchup["matchup_score"],
+                "matchup_details": matchup["details"],
+                "comp_bonus": 0,
+            })
 
-    # Sort by: matchup score first, then late game scaling for teamfights, then winrate
-    # Priority: 1) Don't pick into counters  2) Good teamfight scaling  3) High personal winrate
-    for c in candidates:
-        ctx = get_matchup_context(c["champion"])
-        c["lane_score"] = ctx.get("lane_score", 3)
-        c["late_score"] = ctx.get("late_score", 3)
-
+    # Sort: 1) Comp needs + counter enemy  2) Matchup 상성  3) Personal winrate
     candidates.sort(key=lambda x: (
-        -(x["matchup_score"] * 15),      # 상성 most important (don't get countered)
-        -(x["late_score"] * 5),           # teamfight/late scaling
-        -(x["winrate"]),                  # personal winrate
+        -(x.get("comp_bonus", 0) * 20),
+        -(x["matchup_score"] * 15),
+        -(x["winrate"]),
     ))
 
     pick_suggestions = candidates[:3]
 
+    # Also generate "ideal picks" regardless of user's pool
+    # Check ALL champions for the role, not just user's mastery
+    ideal_candidates = []
+    all_role_champs = []
+    for champ, tags in CHAMPION_TAGS.items():
+        if champ.lower() in banned_lower | ally_lower | enemy_lower:
+            continue
+        # Role filter
+        role_fits = False
+        if norm_role == "UTILITY" and ("enchanter" in tags or "peel" in tags or "engage" in tags or "tank" in tags or "pick" in tags):
+            role_fits = True
+        elif norm_role == "BOTTOM" and ("sustain_dps" in tags or "hypercarry" in tags or "burst" in tags or "safe" in tags):
+            role_fits = True
+        elif norm_role == "MIDDLE" and ("burst" in tags or "poke" in tags or "sustain_dps" in tags or "roam" in tags):
+            role_fits = True
+        elif norm_role == "JUNGLE" and ("engage" in tags or "dive" in tags or "tank" in tags or "burst" in tags or "pick" in tags):
+            role_fits = True
+        elif norm_role == "TOP" and ("split" in tags or "tank" in tags or "dive" in tags or "lane_bully" in tags or "engage" in tags):
+            role_fits = True
+        elif not norm_role:
+            role_fits = True
+        if not role_fits:
+            continue
+
+        matchup = evaluate_pick_vs_enemies(champ, enemy_picks)
+        comp_bonus = 0
+
+        if not team_has_engage and ("engage" in tags or "tank" in tags):
+            comp_bonus += 3
+        if not team_has_peel and ("peel" in tags or "enchanter" in tags):
+            comp_bonus += 2
+        if team_has_hypercarry and ("peel" in tags or "hypercarry_enabler" in tags):
+            comp_bonus += 3
+        if enemy_has_dive and ("peel" in tags or "enchanter" in tags):
+            comp_bonus += 3
+        if enemy_has_poke and ("engage" in tags or "dive" in tags):
+            comp_bonus += 2
+        if enemy_has_engage and ("peel" in tags or "safe" in tags):
+            comp_bonus += 2
+        if enemy_has_scaling and ("engage" in tags or "all_in" in tags or "lane_bully" in tags):
+            comp_bonus += 3
+
+        ideal_candidates.append({
+            "champion": champ,
+            "comp_bonus": comp_bonus,
+            "matchup_score": matchup["matchup_score"],
+            "matchup_details": matchup["details"],
+        })
+
+    ideal_candidates.sort(key=lambda x: (-(x["comp_bonus"] * 20), -(x["matchup_score"] * 15)))
+    # Filter out champions already in pick_suggestions
+    pick_champs = {p["champion"] for p in pick_suggestions}
+    ideal_picks = [c for c in ideal_candidates if c["champion"] not in pick_champs][:3]
+
     # Synergy
     synergy = [s for s in profile.get("synergies", []) if s["champion"].lower() in ally_lower]
 
-    return {"ban_suggestions": ban_suggestions, "pick_suggestions": pick_suggestions, "synergy_matches": synergy}
+    return {"ban_suggestions": ban_suggestions, "pick_suggestions": pick_suggestions, "ideal_picks": ideal_picks, "synergy_matches": synergy}
 
 
 def parse_session(session: dict) -> dict:
@@ -248,8 +424,24 @@ def parse_session(session: dict) -> dict:
 
     for action_group in session.get("actions", []):
         for action in action_group:
-            if action.get("type") == "ban" and action.get("completed") and action.get("championId", 0) > 0:
-                bans.append(champ_name(action["championId"]))
+            # Include both completed and in-progress bans/picks
+            cid = action.get("championId", 0)
+            if cid <= 0:
+                continue
+            if action.get("type") == "ban" and (action.get("completed") or action.get("isInProgress")):
+                bans.append(champ_name(cid))
+            elif action.get("type") == "pick" and action.get("completed"):
+                # Completed picks go to ally/enemy based on actor
+                actor_cell = action.get("actorCellId", -1)
+                is_ally = any(p.get("cellId") == actor_cell for p in session.get("myTeam", []))
+                if actor_cell == local_cell:
+                    pass  # handled below
+                elif is_ally:
+                    if champ_name(cid) not in ally_picks:
+                        ally_picks.append(champ_name(cid))
+                else:
+                    if champ_name(cid) not in enemy_picks:
+                        enemy_picks.append(champ_name(cid))
 
     for p in session.get("myTeam", []):
         cid = p.get("championId", 0) or p.get("championPickIntent", 0)
@@ -257,12 +449,16 @@ def parse_session(session: dict) -> dict:
             my_role = p.get("assignedPosition", "")
             my_champ = cid
         elif cid > 0:
-            ally_picks.append(champ_name(cid))
+            name = champ_name(cid)
+            if name not in ally_picks:
+                ally_picks.append(name)
 
     for p in session.get("theirTeam", []):
         cid = p.get("championId", 0)
         if cid > 0:
-            enemy_picks.append(champ_name(cid))
+            name = champ_name(cid)
+            if name not in enemy_picks:
+                enemy_picks.append(name)
 
     return {"my_role": my_role, "my_champ": champ_name(my_champ) if my_champ > 0 else "", "ally_picks": ally_picks, "enemy_picks": enemy_picks, "bans": bans}
 
@@ -285,7 +481,7 @@ class MatchCoachApp:
         self._build_login_screen()
 
     def _build_login_screen(self):
-        """Initial screen: enter Riot ID."""
+        """Initial screen: auto-detect from League client."""
         self._clear()
 
         frame = tk.Frame(self.root, bg="#0d1117")
@@ -296,54 +492,66 @@ class MatchCoachApp:
         tk.Label(frame, text="Live Draft Helper", font=("Segoe UI", 11),
                  fg="#6b7280", bg="#0d1117").pack(pady=(0, 30))
 
-        tk.Label(frame, text="Enter your Riot ID:", font=("Segoe UI", 10),
-                 fg="#9ca3af", bg="#0d1117").pack()
+        self.status_label = tk.Label(frame, text="Detecting League client...",
+                                     font=("Segoe UI", 10), fg="#9ca3af", bg="#0d1117")
+        self.status_label.pack(pady=10)
 
-        self.entry = tk.Entry(frame, font=("Segoe UI", 12), width=25,
-                              bg="#111827", fg="#e8d5a3", insertbackground="#c89b3c",
-                              relief="flat", highlightthickness=1, highlightcolor="#c89b3c")
-        self.entry.pack(pady=10, ipady=6)
-        self.entry.insert(0, os.getenv("SUMMONER", ""))
-        self.entry.bind("<Return>", lambda e: self._on_connect())
+        # Auto-detect on startup
+        self.root.after(500, self._try_auto_connect)
 
-        self.connect_btn = tk.Button(frame, text="Connect", font=("Segoe UI", 11, "bold"),
-                                     bg="#c89b3c", fg="#0d1117", relief="flat", cursor="hand2",
-                                     command=self._on_connect, width=15)
-        self.connect_btn.pack(pady=10)
+    def _try_auto_connect(self):
+        """Try to auto-detect summoner from League client."""
+        lockfile = read_lockfile()
+        if lockfile:
+            try:
+                port = lockfile["port"]
+                auth = get_auth_header(lockfile["password"])
+                with httpx.Client(verify=False, timeout=5) as client:
+                    resp = client.get(f"https://127.0.0.1:{port}/lol-summoner/v1/current-summoner",
+                                      headers={"Authorization": auth})
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        game_name = data.get("gameName", "")
+                        tag_line = data.get("tagLine", "")
+                        if game_name and tag_line:
+                            self.summoner = f"{game_name}#{tag_line}"
+                            self.status_label.config(text=f"Connected: {self.summoner}", fg="#22c55e")
+                            self.root.update()
+                            threading.Thread(target=self._load_profile, daemon=True).start()
+                            return
+            except Exception:
+                pass
 
-        self.status_label = tk.Label(frame, text="", font=("Segoe UI", 9),
-                                     fg="#6b7280", bg="#0d1117")
-        self.status_label.pack(pady=5)
-
-    def _on_connect(self):
-        self.summoner = self.entry.get().strip()
-        if not self.summoner or "#" not in self.summoner:
-            self.status_label.config(text="⚠ Use format: Name#TAG", fg="#ef4444")
-            return
-
-        self.status_label.config(text="Loading profile...", fg="#6b7280")
-        self.connect_btn.config(state="disabled")
-        self.root.update()
-
-        # Load in background thread
-        threading.Thread(target=self._load_profile, daemon=True).start()
+        # Client not found — retry every 3 seconds
+        self.status_label.config(text="⏳ Waiting for League client...", fg="#9ca3af")
+        self.root.after(3000, self._try_auto_connect)
 
     def _load_profile(self):
+        # Load champion IDs and cached profile in parallel
         load_champion_ids()
 
-        # Always fetch fresh profile from server (latest 30 matches)
-        self.profile = fetch_profile_sync(self.summoner)
-
-        # Fall back to local cache if server is unreachable
-        if not self.profile:
-            self.profile = load_cached_profile()
-
+        # Use cached profile FIRST for instant startup
+        self.profile = load_cached_profile()
         if self.profile:
+            # Show main screen immediately with cached data
             self.root.after(0, self._build_main_screen)
+            # Refresh in background (updates for next champ select)
+            threading.Thread(target=self._refresh_profile, daemon=True).start()
         else:
-            self.root.after(0, lambda: self.status_label.config(
-                text="⚠ Could not load profile. Check internet connection.", fg="#ef4444"))
-            self.root.after(0, lambda: self.connect_btn.config(state="normal"))
+            # No cache — must fetch (first time only)
+            self.profile = fetch_profile_sync(self.summoner)
+            if self.profile:
+                self.root.after(0, self._build_main_screen)
+            else:
+                self.root.after(0, lambda: self.status_label.config(
+                    text="⚠ Could not load profile. Check internet connection.", fg="#ef4444"))
+                self.root.after(0, lambda: self.connect_btn.config(state="normal"))
+
+    def _refresh_profile(self):
+        """Silently refresh profile in background."""
+        fresh = fetch_profile_sync(self.summoner)
+        if fresh:
+            self.profile = fresh
 
     def _build_main_screen(self):
         """Main screen: waiting / champ select display."""
@@ -373,28 +581,51 @@ class MatchCoachApp:
         """Poll LCU every 2 seconds."""
         lockfile = read_lockfile()
         if not lockfile:
-            self.phase_label.config(text="⏳ Waiting for League client...")
-            self._clear_content()
+            if not hasattr(self, '_last_state') or self._last_state != 'waiting':
+                self.phase_label.config(text="⏳ Waiting for League client...")
+                self._clear_content()
+                self._last_state = 'waiting'
         else:
             port = lockfile["port"]
             auth = get_auth_header(lockfile["password"])
             phase = get_gameflow_phase(port, auth)
 
-            if phase == "ChampSelect":
-                self.phase_label.config(text="🎯 IN CHAMP SELECT", fg="#22c55e")
-                session = get_champ_select_session(port, auth)
-                if session:
-                    self._display_draft(session)
+            if phase is None:
+                # Client was closed or connection lost
+                if not hasattr(self, '_last_state') or self._last_state != 'disconnected':
+                    self.phase_label.config(text="⏳ Waiting for League client...")
+                    self._clear_content()
+                    self._last_state = 'disconnected'
+            elif phase == "ChampSelect":
+                # Check if it's a supported game mode (Summoner's Rift only)
+                queue_id = get_current_queue_id(port, auth)
+                if queue_id is not None and queue_id not in SUPPORTED_QUEUES:
+                    if not hasattr(self, '_last_state') or self._last_state != f'skip_{queue_id}':
+                        self.phase_label.config(text=f"⏭️ Non-Rift mode — skipping", fg="#6b7280")
+                        self._clear_content()
+                        self._last_state = f'skip_{queue_id}'
+                else:
+                    self.phase_label.config(text="🎯 IN CHAMP SELECT", fg="#22c55e")
+                    session = get_champ_select_session(port, auth)
+                    if session:
+                        # Only redraw if draft state changed
+                        draft = parse_session(session)
+                        draft_key = f"{draft['bans']}_{draft['ally_picks']}_{draft['enemy_picks']}_{draft['my_champ']}"
+                        if not hasattr(self, '_last_draft_key') or self._last_draft_key != draft_key:
+                            self._display_draft(session)
+                            self._last_draft_key = draft_key
+                    self._last_state = 'champ_select'
             else:
-                self.phase_label.config(text=f"Status: {phase or 'Waiting'}...", fg="#9ca3af")
-                self._clear_content()
+                if not hasattr(self, '_last_state') or self._last_state != f'phase_{phase}':
+                    self.phase_label.config(text=f"Status: {phase or 'Waiting'}...", fg="#9ca3af")
+                    self._clear_content()
+                    self._last_state = f'phase_{phase}'
 
         self.root.after(POLL_INTERVAL, self._poll)
 
     def _display_draft(self, session: dict):
         self._clear_content()
         draft = parse_session(session)
-        recs = get_recommendations(self.profile, draft["my_role"], draft["ally_picks"], draft["enemy_picks"], draft["bans"])
 
         f = self.content_frame
 
@@ -414,6 +645,17 @@ class MatchCoachApp:
             tk.Label(f, text=f"Enemies: {', '.join(draft['enemy_picks'])}", font=("Segoe UI", 9),
                      fg="#f87171", bg="#0d1117").pack(anchor="w")
 
+        # Only show recommendations AFTER there are actual picks/bans to react to
+        has_draft_info = len(draft["bans"]) > 0 or len(draft["ally_picks"]) > 0 or len(draft["enemy_picks"]) > 0
+
+        if not has_draft_info:
+            tk.Frame(f, height=1, bg="#1f2937").pack(fill="x", pady=12)
+            tk.Label(f, text="Waiting for picks & bans...", font=("Segoe UI", 10),
+                     fg="#6b7280", bg="#0d1117").pack()
+            return
+
+        recs = get_recommendations(self.profile, draft["my_role"], draft["ally_picks"], draft["enemy_picks"], draft["bans"])
+
         # Separator
         tk.Frame(f, height=1, bg="#1f2937").pack(fill="x", pady=12)
 
@@ -432,7 +674,7 @@ class MatchCoachApp:
 
         # Pick suggestions with matchup context
         if recs["pick_suggestions"]:
-            tk.Label(f, text="✅ PICK THESE", font=("Segoe UI", 10, "bold"),
+            tk.Label(f, text="✅ FROM YOUR POOL", font=("Segoe UI", 10, "bold"),
                      fg="#22c55e", bg="#0d1117").pack(anchor="w")
             for p in recs["pick_suggestions"]:
                 # Champion row with image
@@ -465,6 +707,29 @@ class MatchCoachApp:
                         tk.Label(info_frame, text=detail, font=("Segoe UI", 8),
                                  fg=color, bg="#0d1117").pack(anchor="w")
 
+            tk.Label(f, text="", bg="#0d1117").pack()
+
+        # Ideal picks (best for situation, regardless of user's pool)
+        if recs.get("ideal_picks"):
+            tk.Label(f, text="💡 IDEAL FOR THIS SITUATION", font=("Segoe UI", 10, "bold"),
+                     fg="#f0c040", bg="#0d1117").pack(anchor="w")
+            for p in recs["ideal_picks"]:
+                pick_frame = tk.Frame(f, bg="#0d1117")
+                pick_frame.pack(anchor="w", fill="x", pady=2)
+                self._load_champ_image(pick_frame, p["champion"])
+                info_frame = tk.Frame(pick_frame, bg="#0d1117")
+                info_frame.pack(side="left", padx=(8, 0))
+                tk.Label(info_frame, text=f"{p['champion']}",
+                         font=("Segoe UI", 10, "bold"), fg="#fde68a", bg="#0d1117").pack(anchor="w")
+                ctx = get_matchup_context(p["champion"])
+                if ctx.get("tip"):
+                    tk.Label(info_frame, text=ctx["tip"], font=("Segoe UI", 8),
+                             fg="#9ca3af", bg="#0d1117").pack(anchor="w")
+                if p.get("matchup_details"):
+                    for detail in p["matchup_details"]:
+                        color = "#86efac" if "유리" in detail else "#fca5a5"
+                        tk.Label(info_frame, text=detail, font=("Segoe UI", 8),
+                                 fg=color, bg="#0d1117").pack(anchor="w")
             tk.Label(f, text="", bg="#0d1117").pack()
 
         # Synergy

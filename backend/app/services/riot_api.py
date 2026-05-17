@@ -7,6 +7,7 @@ load_dotenv()
 
 RIOT_API_KEY = os.getenv("RIOT_API_KEY")
 BASE_URL = "https://americas.api.riotgames.com"
+REGIONAL_URL = "https://na1.api.riotgames.com"  # For champion mastery, summoner endpoints
 
 # Riot match-v5 `mapId`: 11 = Summoner's Rift (excludes ARAM / Howling Abyss map 12, etc.)
 MAP_SUMMONERS_RIFT = 11
@@ -126,6 +127,24 @@ def is_summoners_rift_match(match_data: dict) -> bool:
     """True if the game was on Summoner's Rift (excludes ARAM and other maps)."""
     info = match_data.get("info") or {}
     return info.get("mapId") == MAP_SUMMONERS_RIFT
+
+
+def get_champion_mastery(puuid: str, count: int = 15) -> list[dict]:
+    """
+    Fetch top champion masteries for a player.
+    Returns list of {championId, championLevel, championPoints, championPointsSinceLastLevel}.
+    """
+    if not RIOT_API_KEY:
+        return []
+    url = f"{REGIONAL_URL}/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}/top?count={count}"
+    try:
+        with httpx.Client(timeout=10) as client:
+            resp = client.get(url, headers=_headers())
+            if resp.status_code == 200:
+                return resp.json()
+            return []
+    except Exception:
+        return []
 
 
 def get_match_summary(match_id: str) -> dict | None:

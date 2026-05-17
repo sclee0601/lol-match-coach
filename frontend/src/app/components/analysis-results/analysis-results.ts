@@ -93,23 +93,23 @@ export class AnalysisResultsComponent implements OnChanges {
       ) {
         this.laningContent += s + '\n';
       } else if (
+        lower.startsWith('### 4.') ||
+        lower.includes('strategic fixes') ||
+        lower.includes('top 3') ||
+        lower.startsWith('## teamfight') ||
+        lower.startsWith('## top')
+      ) {
+        this.teamfightContent += s + '\n';
+      } else if (
         lower.startsWith('## key') ||
         lower.startsWith('## deaths') ||
         lower.startsWith('### 3.') ||
         lower.includes('mid/late game') ||
         lower.includes('key events') ||
-        lower.includes('objectives')
+        lower.includes('objectives') ||
+        lower.includes('teamfight analysis')
       ) {
         this.eventsContent += s + '\n';
-      } else if (
-        lower.startsWith('### 4.') ||
-        lower.includes('strategic fixes') ||
-        lower.includes('top 3') ||
-        lower.includes('teamfight') ||
-        lower.startsWith('## teamfight') ||
-        lower.startsWith('## top')
-      ) {
-        this.teamfightContent += s + '\n';
       } else if (s.trim()) {
         // Unmatched content — put in teamfights tab
         this.teamfightContent += s + '\n';

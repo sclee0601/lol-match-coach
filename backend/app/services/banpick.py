@@ -7,6 +7,7 @@ from app.services.riot_api import (
     get_puuid_by_riot_id,
     get_match_ids_by_puuid,
     get_match_summaries_parallel,
+    get_champion_mastery,
     is_summoners_rift_match,
 )
 from app.services.comp_classifier import classify_comp, get_team_champions_for_player
@@ -163,10 +164,23 @@ async def build_banpick_profile(puuid: str) -> dict:
             })
     synergies.sort(key=lambda x: (-x["winrate"], -x["games"]))
 
+    # Get champion mastery (actual champion pool, all-time)
+    mastery = get_champion_mastery(puuid, count=15)
+    mastery_pool = []
+    for m in mastery:
+        champ_id_val = m.get("championId", 0)
+        champ_name_val = champ_name(champ_id_val) if champ_id_val in CHAMP_ID_TO_NAME else f"#{champ_id_val}"
+        mastery_pool.append({
+            "champion": champ_name_val,
+            "mastery_level": m.get("championLevel", 0),
+            "mastery_points": m.get("championPoints", 0),
+        })
+
     return {
         "enemy_threats": enemy_threats[:10],
         "best_picks": best_picks[:10],
         "synergies": synergies[:10],
+        "mastery_pool": mastery_pool,
     }
 
 
