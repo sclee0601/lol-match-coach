@@ -11,7 +11,7 @@ import threading
 import tkinter as tk
 import httpx
 import urllib3
-from matchup_data import get_matchup_context, evaluate_pick_vs_enemies
+from matchup_data import get_matchup_context, evaluate_pick_vs_enemies, CHAMPION_DATA, CHAMPION_TAGS
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -147,6 +147,63 @@ SUPPORTED_QUEUES = {
     410,   # Ranked Solo (old)
 }
 
+# ---------------------------------------------------------------------------
+# Role champion sets (module-level constants)
+# ---------------------------------------------------------------------------
+
+# Known ADC champions (for role filtering — tags alone overlap with mid laners)
+# Includes APC bot laners (Ziggs, Seraphine, Veigar, Hwei, Mel, Brand, Swain, etc.)
+ADC_CHAMPIONS = {
+    "Jinx", "KogMaw", "Vayne", "Caitlyn", "Draven", "Lucian", "Ezreal",
+    "Varus", "Jhin", "Ashe", "MissFortune", "Kaisa", "Xayah", "Samira",
+    "Tristana", "Sivir", "Aphelios", "Twitch", "Zeri", "Smolder", "Nilah",
+    "Kalista", "Corki", "Ziggs", "Seraphine", "Veigar", "Hwei", "Mel",
+    "Brand", "Swain", "Karthus", "Heimerdinger", "Taliyah", "Aurora",
+    "Senna",
+}
+
+# Known support champions (to exclude from solo lane ideal picks)
+SUPPORT_CHAMPIONS = {
+    "Thresh", "Nautilus", "Leona", "Alistar", "Blitzcrank", "Pyke", "Rakan",
+    "Rell", "Milio", "Lulu", "Janna", "Soraka", "Nami", "Yuumi", "Sona",
+    "Karma", "Morgana", "Lux", "Zyra", "Brand", "Xerath", "Vel'Koz",
+    "Senna", "TahmKench", "Braum", "Renata", "Bard", "Poppy", "Galio",
+    "Taric", "Zilean", "Seraphine", "Yunara",
+}
+
+# Known junglers (for JUNGLE ideal picks)
+JUNGLE_CHAMPIONS = {
+    "LeeSin", "Elise", "Nidalee", "KhaZix", "Evelynn", "Viego", "Graves",
+    "Kindred", "Diana", "JarvanIV", "Vi", "Hecarim", "Amumu", "Sejuani",
+    "Zac", "MasterYi", "Kayn", "Nocturne", "Lillia", "Wukong", "Briar",
+    "Ivern", "Nunu", "Shaco", "Rammus", "Maokai", "Belveth", "Rengar",
+    "Skarner", "Volibear", "Warwick",
+}
+
+# Known top laners (to exclude from MID ideal picks)
+TOP_CHAMPIONS = {
+    "Darius", "Garen", "Mordekaiser", "Fiora", "Camille", "Jax", "Irelia",
+    "Riven", "Aatrox", "Ornn", "Malphite", "Sion", "Kennen", "Gnar",
+    "Gangplank", "Renekton", "Jayce", "Shen", "Quinn", "KSante", "Volibear",
+    "Nasus", "Tryndamere", "Ambessa", "Yorick", "Illaoi", "Kled",
+    "Dr.Mundo", "Singed", "Urgot", "Cho'Gath", "Rumble",
+}
+
+# Mid-only champions (to exclude from TOP ideal picks)
+MID_CHAMPIONS = {
+    "Ahri", "Syndra", "Orianna", "Viktor", "Zed", "Fizz", "LeBlanc",
+    "Katarina", "Akali", "Zoe", "AurelionSol", "Malzahar", "Veigar",
+    "TwistedFate", "Hwei", "Neeko", "Seraphine", "Annie", "Lissandra",
+    "Cassiopeia", "Azir", "Anivia", "Ryze", "Pantheon", "Naafiri",
+    "Talon", "Ekko",
+}
+
+# Combined bot lane set for archetype detection
+BOT_LANE_CHAMPS = ADC_CHAMPIONS | SUPPORT_CHAMPIONS
+
+# Role name normalization map
+ROLE_MAP = {"top": "TOP", "jungle": "JUNGLE", "middle": "MIDDLE", "bottom": "BOTTOM", "utility": "UTILITY"}
+
 
 # ---------------------------------------------------------------------------
 # Champion data
@@ -227,15 +284,12 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
             break
 
     # Pick suggestions — factor in matchups against enemy draft
-    role_map = {"top": "TOP", "jungle": "JUNGLE", "middle": "MIDDLE", "bottom": "BOTTOM", "utility": "UTILITY"}
-    norm_role = role_map.get(my_role.lower(), my_role.upper())
+    norm_role = ROLE_MAP.get(my_role.lower(), my_role.upper())
 
     # Gather candidate picks — use comp classifier + counter enemy comp
     candidates = []
 
     # Classify ally comp using CHAMPION_TAGS
-    from matchup_data import CHAMPION_DATA, CHAMPION_TAGS
-
     ally_tags = []
     for ally in ally_picks:
         ally_tags.extend(CHAMPION_TAGS.get(ally, []))
@@ -274,17 +328,8 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
     enemy_bot_tags = []
     for enemy in enemy_picks:
         etags = CHAMPION_TAGS.get(enemy, [])
-        # Detect if this enemy is a bot laner (ADC or support)
-        is_bot = any(t in etags for t in ["sustain_dps", "hypercarry", "lane_bully", "safe", "siege",
-                                           "enchanter", "peel", "engage", "tank", "pick"])
         # More specific: check if it's in known ADC or support sets
-        if enemy in {"Jinx","KogMaw","Vayne","Caitlyn","Draven","Lucian","Ezreal","Varus","Jhin",
-                     "Ashe","MissFortune","Kaisa","Xayah","Samira","Tristana","Sivir","Aphelios",
-                     "Twitch","Zeri","Smolder","Nilah","Kalista","Corki","Ziggs","Seraphine",
-                     "Veigar","Hwei","Mel","Brand","Swain","Karthus","Senna",
-                     "Thresh","Nautilus","Leona","Alistar","Blitzcrank","Pyke","Rakan","Rell",
-                     "Milio","Lulu","Janna","Soraka","Nami","Yuumi","Sona","Karma","Morgana",
-                     "Lux","Zyra","Xerath","Braum","Renata","Bard","TahmKench","Poppy","Taric"}:
+        if enemy in BOT_LANE_CHAMPS:
             enemy_bot_tags.extend(etags)
 
     # Classify enemy bot duo archetype
@@ -306,17 +351,6 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
     # Use mastery pool (actual mains) as primary, fall back to recent picks
     champion_pool = profile.get("mastery_pool", [])
     recent_picks = profile.get("best_picks", [])
-
-    # Known ADC champions (for role filtering — tags alone overlap with mid laners)
-    # Includes APC bot laners (Ziggs, Seraphine, Veigar, Hwei, Mel, Brand, Swain, etc.)
-    ADC_CHAMPIONS = {
-        "Jinx", "KogMaw", "Vayne", "Caitlyn", "Draven", "Lucian", "Ezreal",
-        "Varus", "Jhin", "Ashe", "MissFortune", "Kaisa", "Xayah", "Samira",
-        "Tristana", "Sivir", "Aphelios", "Twitch", "Zeri", "Smolder", "Nilah",
-        "Kalista", "Corki", "Ziggs", "Seraphine", "Veigar", "Hwei", "Mel",
-        "Brand", "Swain", "Karthus", "Heimerdinger", "Taliyah", "Aurora",
-        "Senna",
-    }
 
     # Build candidate list from mastery pool first
     for mastery_champ in champion_pool:
@@ -494,42 +528,6 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
 
     # Also generate "ideal picks" regardless of user's pool
     # Check ALL champions for the role, not just user's mastery
-    # Known support champions (to exclude from solo lane ideal picks)
-    SUPPORT_CHAMPIONS = {
-        "Thresh", "Nautilus", "Leona", "Alistar", "Blitzcrank", "Pyke", "Rakan",
-        "Rell", "Milio", "Lulu", "Janna", "Soraka", "Nami", "Yuumi", "Sona",
-        "Karma", "Morgana", "Lux", "Zyra", "Brand", "Xerath", "Vel'Koz",
-        "Senna", "TahmKench", "Braum", "Renata", "Bard", "Poppy", "Galio",
-        "Taric", "Zilean", "Seraphine", "Yunara",
-    }
-
-    # Known junglers (for JUNGLE ideal picks)
-    JUNGLE_CHAMPIONS = {
-        "LeeSin", "Elise", "Nidalee", "KhaZix", "Evelynn", "Viego", "Graves",
-        "Kindred", "Diana", "JarvanIV", "Vi", "Hecarim", "Amumu", "Sejuani",
-        "Zac", "MasterYi", "Kayn", "Nocturne", "Lillia", "Wukong", "Briar",
-        "Ivern", "Nunu", "Shaco", "Rammus", "Maokai", "Belveth", "Rengar",
-        "Skarner", "Volibear", "Warwick",
-    }
-
-    # Known top laners (to exclude from MID ideal picks)
-    TOP_CHAMPIONS = {
-        "Darius", "Garen", "Mordekaiser", "Fiora", "Camille", "Jax", "Irelia",
-        "Riven", "Aatrox", "Ornn", "Malphite", "Sion", "Kennen", "Gnar",
-        "Gangplank", "Renekton", "Jayce", "Shen", "Quinn", "KSante", "Volibear",
-        "Nasus", "Tryndamere", "Ambessa", "Yorick", "Illaoi", "Kled",
-        "Dr.Mundo", "Singed", "Urgot", "Cho'Gath", "Rumble",
-    }
-
-    # Mid-only champions (to exclude from TOP ideal picks)
-    MID_CHAMPIONS = {
-        "Ahri", "Syndra", "Orianna", "Viktor", "Zed", "Fizz", "LeBlanc",
-        "Katarina", "Akali", "Zoe", "AurelionSol", "Malzahar", "Veigar",
-        "TwistedFate", "Hwei", "Neeko", "Seraphine", "Annie", "Lissandra",
-        "Cassiopeia", "Azir", "Anivia", "Ryze", "Pantheon", "Naafiri",
-        "Talon", "Ekko",
-    }
-
     ideal_candidates = []
     for champ, tags in CHAMPION_TAGS.items():
         if champ.lower() in banned_lower | ally_lower | enemy_lower:
