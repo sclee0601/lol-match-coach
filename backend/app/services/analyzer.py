@@ -13,6 +13,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 # ---------------------------------------------------------------------------
 
 STANDARDS_DIR = Path(__file__).resolve().parent.parent.parent / "standards"
+CHALLENGER_BEHAVIOR_PATH = Path(__file__).resolve().parent.parent.parent / "challenger_behavior.md"
 
 ROLE_TO_FILE = {
     "BOTTOM": "adc.md",
@@ -21,6 +22,13 @@ ROLE_TO_FILE = {
     "JUNGLE": "jungle.md",
     "TOP": "top.md",
 }
+
+
+def _load_challenger_behavior() -> str:
+    """Load the challenger behavior decision guide."""
+    if CHALLENGER_BEHAVIOR_PATH.exists():
+        return CHALLENGER_BEHAVIOR_PATH.read_text(encoding="utf-8")
+    return ""
 
 
 def _load_role_standards(role: str) -> str:
@@ -43,8 +51,14 @@ def _get_relevant_standards(role: str, has_laning_deaths: bool, has_late_deaths:
     sections = full_standards.split("\n## ")
     relevant = []
 
+    # Sections to skip (LLM can infer these, saves tokens)
+    skip_keywords = {"cooldown tracking", "game clock", "power spike"}
+
     for section in sections:
         lower = section.lower()
+        # Skip token-heavy sections the LLM can infer
+        if any(kw in lower for kw in skip_keywords):
+            continue
         # Always include CS & Gold benchmarks
         if "cs" in lower and "gold" in lower:
             relevant.append("## " + section)
@@ -59,6 +73,9 @@ def _get_relevant_standards(role: str, has_laning_deaths: bool, has_late_deaths:
             relevant.append("## " + section)
         # Always include general rules
         if "general" in lower:
+            relevant.append("## " + section)
+        # Include matchup adjustments
+        if "matchup" in lower:
             relevant.append("## " + section)
 
     return "\n".join(relevant) if relevant else full_standards
@@ -230,6 +247,12 @@ def build_prompt(players: list[dict], champion_filter: str | None, timeline_summ
     if role_standards:
         standards_section = f"\n## Role Standards (APPLY these rules when evaluating each event)\n{role_standards}\n"
 
+    # Challenger behavior decision guide (applies to all roles)
+    behavior_guide = _load_challenger_behavior()
+    behavior_section = ""
+    if behavior_guide:
+        behavior_section = f"\n## Decision Framework (USE this to analyze each death/mistake)\n{behavior_guide}\n"
+
     prompt = f"""## Game Data (All 10 Players)
 Length: {game_length_min} min
 {all_player_lines}
@@ -238,6 +261,7 @@ Length: {game_length_min} min
 {opponent_info}
 {timeline_section}
 {standards_section}
+{behavior_section}
 ## Coaching Report for {champ_name} ({role}) — {result}
 
 Analyze THIS SPECIFIC GAME using the timeline data above. Every point must reference actual events from the data. Do NOT give generic advice.
