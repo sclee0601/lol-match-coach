@@ -315,7 +315,11 @@ def get_recommendations(profile: dict, my_role: str, ally_picks: list, enemy_pic
     enemy_has_dive = enemy_tags.count("dive") >= 2 or enemy_tags.count("burst") >= 2
     enemy_has_poke = enemy_tags.count("poke") >= 2
     enemy_has_engage = "engage" in enemy_tags or "tank" in enemy_tags  # single engage/tank is already a threat
-    enemy_has_heavy_engage = enemy_tags.count("engage") >= 2 or (enemy_tags.count("engage") >= 1 and enemy_tags.count("tank") >= 2)  # J4+Ornn, Leona+Amumu etc.
+    enemy_has_heavy_engage = (
+        enemy_tags.count("engage") >= 2
+        or (enemy_tags.count("engage") >= 1 and enemy_tags.count("tank") >= 2)
+        or (enemy_tags.count("dive") + enemy_tags.count("burst") >= 3)  # Pantheon+Gragas+Ahri = heavy dive threat
+    )
     enemy_has_pick = "pick" in enemy_tags  # single pick champion is a threat (e.g. Nautilus R)
     enemy_has_split = "split" in enemy_tags
     enemy_has_hypercarry = "hypercarry" in enemy_tags
